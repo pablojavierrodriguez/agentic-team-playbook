@@ -103,9 +103,17 @@ For strategic features (Mode 3), the team orchestrates a rigorous feedback loop:
 │   └── skills/
 │       ├── pm-orchestrator/SKILL.md             # Sprint leadership & DoD
 │       ├── market-researcher/SKILL.md           # Benchmarking & edge cases
-│       ├── worldclass-product-designer/SKILL.md # UI design system & touch ergonomics
+│       ├── worldclass-product-designer/SKILL.md # UI design system & touch ergonomics (≥44px)
 │       ├── principal-engineer/SKILL.md          # Architecture, strict typing & fast-track
-│       └── rigorous-qa-auditor/SKILL.md         # A11y, mobile viewport & QA signoff
+│       ├── rigorous-qa-auditor/SKILL.md         # A11y, mobile viewport & QA signoff
+│       ├── code-level-ux-auditor/SKILL.md       # Static anti-patterns auditor (scroll, keyboards, janks)
+│       ├── mobile-ux-design/SKILL.md            # Touch targets, safe areas & sheets
+│       ├── forms-rhf-zod/SKILL.md               # Controlled inputs, numeric parsing & schemas
+│       ├── pwa-assets-audit/SKILL.md            # Manifest, icons & offline compliance
+│       ├── recharts-reporting/SKILL.md          # Responsive data visualizations & KPIs
+│       └── ui-radix-tailwind/SKILL.md           # Accessible primitive UI components
+├── scripts/
+│   └── audit-ux-code.cjs         # CLI tool: scans src/ for 8 static mobile UX anti-patterns
 ├── docs/
 │   └── sprints/
 │       └── SPRINT_SPEC_TEMPLATE.md # Universal sprint runbook template
