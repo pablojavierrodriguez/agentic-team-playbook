@@ -21,7 +21,7 @@
    - *(b) Tactical Duo:* Product Designer + Principal Engineer for component/modal redesigns.
    - *(c) Full Sprint Playbook:* PM Orchestrator leading the 5-phase loop for backlog features or structural changes.
    See [.agents/TEAM_PLAYBOOK.md](file:///.agents/TEAM_PLAYBOOK.md).
-7. **Sub-Agent Autonomy (Parallelization vs. Atomic Focus):** Golden rule: *"Atomic focus on domain logic; parallel hands on exploration and verification"*. Dispatch sub-agents (browser testing in mobile viewports, benchmarks) autonomously, but preserve single-threaded atomic focus on state management, business math, and database schemas.
+7. **Sub-Agent Autonomy (Parallelization vs. Atomic Focus):** Golden rule: *"Atomic focus on domain logic; parallel hands on exploration and verification"*. Dispatch sub-agents (browser testing in mobile viewports, benchmarks) autonomously, but preserve single-threaded atomic focus on state management, core business rules, and database schemas.
 
 ---
 
@@ -30,7 +30,7 @@
 > Configure your project stack below:
 
 - **Frontend:** [e.g., React / Next.js / Vue / Svelte]
-- **Backend / DB:** [e.g., PostgreSQL / Supabase / Node.js / Go / Python]
+- **Backend / DB:** [e.g., PostgreSQL / MySQL / Node.js / Go / Python]
 - **Styling:** [e.g., Tailwind CSS / CSS Modules]
 - **Forms & Validation:** [e.g., React Hook Form + Zod]
 - **Testing:** [e.g., Vitest / Jest / Playwright]

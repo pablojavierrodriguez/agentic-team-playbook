@@ -55,7 +55,7 @@ The developer never has to manually specify *"activate the designer"* or *"open 
 - **Accessibility & Performance Auditing:** Automated WCAG 2.1 AA checks and render profilers.
 
 ### 🔴 When to Keep Atomic Single-Thread Focus:
-- **Core Domain Logic & Accounting:** State mutations and financial invariants demand deterministic, single-threaded execution to prevent race conditions.
+- **Core Domain Logic & State Invariants:** State mutations and critical business invariants demand deterministic, single-threaded execution to prevent race conditions.
 - **Database Schema & Migrations:** Schema foundations and RLS policies must be authored by a single architectural mind.
 - **Global State Management:** Context providers and local persistence caches.
 
@@ -130,7 +130,7 @@ This framework is **100% agnostic** of language, stack, and industry.
    ```
 2. Open `AGENTS.md` and customize:
    - **Stack:** Define your tools (e.g. Next.js, FastAPI, Go, Tailwind, PostgreSQL).
-   - **Invariants:** Add any strict domain rules (e.g. currency formatting, RBAC).
+   - **Invariants:** Add any strict domain rules (e.g. data validation, RBAC, access policies).
 3. Start prompting your AI agent naturally. The system will self-select the right mode automatically!
 
 ### Option B: Global Installation (Available across all workspaces)

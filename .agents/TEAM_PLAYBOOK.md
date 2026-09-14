@@ -32,7 +32,7 @@ The PM Orchestrator and Principal Engineer decide when to spawn sub-agents (e.g.
 
 ### 🔴 When to Keep STRICT ATOMIC FOCUS (Single-thread, No Sub-Agents):
 1. **Domain Logic & State Invariants:**
-   - Core business calculations, state stores, and data balance integrity require strict sequential reasoning. Fragmenting domain logic across parallel subagents risks race conditions and contradictory code.
+   - Core business logic, central state stores, and data integrity require strict sequential reasoning. Fragmenting domain logic across parallel subagents risks race conditions and contradictory code.
 2. **Database Schemas & Migrations:**
    - Schema foundations, migrations, and Row-Level Security (RLS) policies must be designed and validated by a single technical mind to guarantee idempotence.
 3. **Core Architectural Refactoring:**

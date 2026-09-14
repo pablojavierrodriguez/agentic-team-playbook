@@ -38,4 +38,4 @@ Ensure every development cycle has a sharp, measurable objective delivering tang
 4. **Dynamic Decision & Sub-Agent Delegation:**
    - **Dynamic Mode Classification:** Automatically classify tasks into Mode 1 (Fast-Track), Mode 2 (Tactical Duo), or Mode 3 (Full Sprint) without user friction.
    - **Autonomous Sub-Agents:** Autonomously dispatch browser sub-agents or background tasks during QA to test mobile viewports and flows without blocking the main conversational thread.
-   - **Preserve Focus:** Keep core domain logic, accounting balances, and database schemas single-threaded to prevent race conditions or fragmented responsibilities.
+   - **Preserve Focus:** Keep core domain logic, central state management, and database schemas single-threaded to prevent race conditions or fragmented responsibilities.
