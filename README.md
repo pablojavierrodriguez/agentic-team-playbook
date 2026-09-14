@@ -142,13 +142,30 @@ For environments like Antigravity IDE:
 
 ---
 
+## 🔌 Supercharging Your Team with Official MCP Servers
+
+While this framework works standalone with any standard AI coding assistant, pairing it with official **Model Context Protocol (MCP)** servers gives your virtual team specialized real-world superpowers:
+
+| Role | Recommended Official MCP | Superpower Unlocked |
+| :--- | :--- | :--- |
+| **PM Orchestrator & Principal Engineer** | **GitHub MCP** (`@modelcontextprotocol/server-github`) | Read backlog issues, inspect PR diffs, check commit histories, and draft releases directly from the repository. |
+| **Rigorous QA Auditor** | **Chrome DevTools / Puppeteer MCP** (`@modelcontextprotocol/server-puppeteer`) | Autonomous browser navigation, mobile viewport resizing (375px), a11y auditing, and console error detection. |
+| **Principal Engineer** | **Postgres / Database MCP** (`@modelcontextprotocol/server-postgres`) | Live schema inspection, migration verification, and query optimization without leaving the terminal. |
+| **All Roles** | **Filesystem MCP** (`@modelcontextprotocol/server-filesystem`) | High-speed directory traversal and workspace indexing for massive monorepos. |
+
+> [!TIP]
+> **Security Best Practice:** Always configure MCP servers in your private local IDE/client settings (e.g. `~/.gemini/config/mcp_config.json`, Claude Desktop config, or Cursor settings). **Never commit personal access tokens, database connection strings, or private keys to your project repositories.**
+
+---
+
 ## 🇪🇸 Resumen en Español
 
 **Agentic Team Playbook** es un framework de gobernanza y desarrollo multi-agente para transformar asistentes de IA en un equipo de ingeniería de alto rendimiento:
 
 - **Autonomía sin burocracia:** Clasificación dinámica entre *Foco Quirúrgico* (fixes directos sin papeleo), *Dúo Táctico* (UX + Código) y *Sprint Playbook* (épicas del backlog).
-- **Subagentes inteligentes:** Delega autónomamente tareas paralelas a subagentes (navegación y QA en mobile 375px) mientras preserva foco atómico secuencial en modelos de datos y cálculos de negocio.
+- **Subagentes inteligentes:** Delega autónomamente tareas paralelas a subagentes (navegación y QA en mobile 375px) mientras preserva foco atómico secuencial en modelos de datos y reglas de negocio.
 - **Drop-in universal:** Funciona en cualquier tecnología (React, Vue, Node, Python, Go, Swift) copiando la carpeta `.agents/` a tu repositorio.
+- **Potenciación con MCP Oficiales:** Compatible con servidores MCP (GitHub, Puppeteer/DevTools, PostgreSQL) configurados en tu entorno local para dotar a los roles de interacción real con navegador, issues y bases de datos.
 
 ---
 
