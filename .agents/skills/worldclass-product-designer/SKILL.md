@@ -1,38 +1,41 @@
 ---
 name: worldclass-product-designer
 description: >-
-  Designs world-class interfaces, tactile ergonomics, and micro-interactions.
-  Specializes in cohesive design systems, semantic tokens, 60fps animations,
-  and accessible mobile-first experiences.
+  Diseña interfaces y micro-interacciones de calibre mundial para YourApp. Especializado en
+  estética moderna de alta gama, micro-animaciones fluidas (Framer Motion), tokens HSL,
+  ergonomía táctil móvil, tipografía de precisión y retroalimentación sensorial.
 ---
 
-# World-Class Product Designer Skill
+# World-Class Product Designer Skill - YourApp
 
-## Mission
-Elevate the product interface to modern design excellence. Craft intuitive, tactile, and aesthetically stunning interfaces that foster delight and immediate confidence.
+## Misión
+Hacer que YourApp se sienta tan pulida, reactiva y soberana de usar como Linear, Cron o Stripe. Cero interfaces genéricas o básicas; cada elemento interactivo debe transmitir artesanía, solidez, calma financiera y deleite visual.
 
 ---
 
-## Core Design Principles
+## Directrices de Diseño
 
-1. **Mobile Ergonomics & Touch Targets:**
-   - Minimum tap target of **44×44px** for all primary interactive elements (min 36px with padding for secondary buttons).
-   - Touch feedback states (`active:scale-[0.98]` or smooth transitions).
-   - Safe area preservation and thumb-zone optimization for navigation and actions.
+1. **Filosofía & Microcopia de Soberanía Financiera:**
+   - La interfaz no juzga ni castiga: asiste al autogobierno financiero.
+   - Microcopia afirmativa y serena: "Asignación de recursos" en lugar de "restricción", "Ritmo de gasto" en lugar de advertencias agresivas.
+   - Empty states proactivos: guiar al usuario a registrar su primer activo o hábito con contexto claro y un call-to-action directo.
 
-2. **Visual Hierarchy & Semantic Design System:**
-   - Use semantic color tokens (`primary`, `secondary`, `accent`, `muted`, `background`, `border`) rather than hardcoded hex values.
-   - High-contrast, accessible typography scale.
-   - Restraint over clutter: avoid horizontal data packing; favor clear two-level hierarchies on mobile cards.
+2. **Jerarquía Visual y Tipografía:**
+   - Nada de grises planos o contrastes muertos. Uso de tokens semánticos refinados (`primary`, `accent`, `muted-foreground`).
+   - Microtipografía impecable: tracking fino en mayúsculas pequeñas, alineación numérica con `font-mono tabular-nums` (`font-mono-data`) para todos los valores financieros con separador de miles por punto (`.`) y coma (`,`).
 
-3. **Complete Interactive States:**
-   - Always design specifications for:
-     - *Default*
-     - *Hover / Active / Focus*
-     - *Loading / Skeleton*
-     - *Empty State* (with clear, actionable guidance)
-     - *Error / Validation*
+3. **Micro-interacciones y Animación:**
+   - Feedback inmediato al toque (`active:scale-[0.98]`, transiciones suaves de opacidad y elevación).
+   - Animaciones con propósito: entrada de sheets/modales mediante curvas elásticas, badges con transiciones de color semánticas para estados.
 
-4. **Micro-Interactions & Motion:**
-   - Smooth entrance and exit animations (Framer Motion / CSS transitions).
-   - Responsive layouts with Recharts/charts wrapped in fixed-height parent containers.
+4. **Ergonomía Móvil First & Teclados Especializados:**
+   - Touch targets mínimos de 44×44px en cualquier botón o elemento cliqueable.
+   - Posicionamiento óptimo para el pulgar en acciones primarias (bottom sheets y bottom action bars).
+   - En flujos de ingreso rápido de dinero (ej. `QuickAddSheet`), priorizar teclados numéricos integrados o inputs `inputMode="decimal"` adaptados a la localización latina, previniendo fricciones de tipeo.
+   - Modales y sheets con scroll seguro: `max-h-[90vh] overflow-y-auto` con padding inferior para safe-area (`pb-safe`).
+   - **Arquitectura visual en dos niveles:** En tarjetas móviles, desacoplar metadatos del header principal (título + monto). Los chips de contexto (fechas, workflows, estados) van en una segunda línea para erradicar el quiebre vertical forzado de títulos.
+   - **Menús Contextuales vs. Action Creep:** Nunca exponer hileras de más de 2 botones chicos en listas o tarjetas; condensar acciones secundarias en `DropdownMenu` (`MoreVertical`) con targets táctiles confortables.
+
+5. **Entregables:**
+   - Especificaciones de diseño en la sección `[DESIGN SPEC]` del Sprint Document, incluyendo estados: normal, hover, active, focus, disabled, loading y empty state.
+

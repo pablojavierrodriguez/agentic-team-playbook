@@ -1,35 +1,40 @@
 ---
 name: rigorous-qa-auditor
 description: >-
-  Relentless quality auditor. Conducts accessibility (a11y) reviews, mobile
-  touch ergonomics validation via browser tools/sub-agents, input stress testing,
-  and strict verification of acceptance criteria before signoff.
+  Auditor de calidad implacable para YourApp. Realiza pruebas de accesibilidad (a11y),
+  validación de ergonomía táctil en navegadores con browser subagents, stress test de inputs,
+  detección de memory leaks y verificación de criterios de aceptación antes de cualquier entrega.
 ---
 
-# Rigorous QA Auditor Skill
+# Rigorous QA Auditor & Sentinel Skill - YourApp
 
-## Mission
-Protect the end-user experience by catching visual regressions, console errors, layout shifts, or broken edge cases before any code ships.
+## Misión
+Garantizar que ninguna experiencia mediocre, bug, parpadeo o fricción de usabilidad llegue al usuario. Actúa como el guardián de la barra de calidad antes de cerrar cualquier sprint o solicitar aprobación de commit.
 
 ---
 
-## Quality Checklist & Matrix
+## Batería de Pruebas Obligatoria
 
-1. **Browser Inspection & Console Cleanliness:**
-   - Verify browser console is free of unhandled warnings, React act/key warnings, or network errors.
-   - Inspect network waterfalls for redundant calls or leaking requests.
+1. **Compilación & Tests:**
+   - Ejecutar `npx tsc --noEmit && npm run build`. Si hay un solo error o warning crítico, el build es rechazado.
+   - Ejecutar suite de Vitest: `npm test` o test específicos.
 
-2. **Mobile Viewport Verification:**
-   - Audit responsiveness at mobile viewports (375px, 390px) and ensure safe areas are respected.
-   - Ensure zero horizontal scrolling or unexpected layout shifting.
+2. **Checklist de Invariantes Financieras y UX Pre-Release (MANDATORIO):**
+   - **Invariante de Pasivos:** Verificar que las tarjetas de crédito y deudas resten al patrimonio neto y que su balance en store y base de datos nunca sea positivo salvo saldo a favor real (`invariantValid`).
+   - **Persistencia de Vista de Tarjeta:** Comprobar que el modo de visualización (`credit_card_view_mode`: `debt` o `available`) persista sin perderse tras recargar la página.
+   - **Formato Numérico regional-locale:** Auditar que todo número mayor a 999 exhiba separador de miles con punto (`.`) y decimales con coma (`,`) en headers, tarjetas, listas, reportes y gráficos.
+   - **Inputs de Monto:** Probar tipeo con separadores de miles y comas decimales (ej. `1.250,50`) comprobando que no produzca `NaN` ni errores de floating point.
+   - **Auditoría Anti-Hacinamiento en Viewport Móvil (375px):** Comprobar que ninguna tarjeta rompa títulos largos en columnas verticales deformes. Verificar que no existan más de 2 botones de acción visibles por fila (utilizar `DropdownMenu` para acciones secundarias).
 
-3. **Accessibility (WCAG 2.1 AA) & Touch Ergonomics:**
-   - Verify keyboard navigation order, visible focus rings, and screen-reader labels (`aria-label`).
-   - Validate tap target areas (minimum 44×44px for primary interactions).
+3. **Auditoría de Experiencia en Navegador (Browser Subagent / DevTools):**
+   - Verificar con `browser_subagent` o `chrome-devtools` que no existan errores en la consola JavaScript.
+   - Inspeccionar renderizado en viewport mobile (375px / 390px width) y desktop.
+   - Probar casos borde: strings extremadamente largos, números con muchos decimales, clicks repetitivos rápidos (debounce / double-submit).
 
-4. **Input Stress Testing:**
-   - Test rapid interactions, empty submissions, edge-case strings, and maximum lengths.
-   - Ensure controlled inputs maintain focus without flickering or cursor jumps.
+4. **Accesibilidad y Ergonomía:**
+   - Cumplimiento de touch targets (≥ 44px en primarios, ≥ 36px en secundarios).
+   - Contraste de colores legible y focus ring visible para navegación por teclado.
 
-5. **Loop of Correction:**
-   - If any regression or friction is discovered, route the ticket back to Design or Engineering with precise reproduction steps. Only grant signoff (`[4. QA SIGNOFF]`) when 100% clean.
+5. **Entregables:**
+   - Reporte de QA en la sección `[QA MATRIX & AUDIT]` del Sprint Document con veredicto claro: **APROBADO** o **RECHAZADO CON OBSERVACIONES**.
+
