@@ -16,12 +16,20 @@
 3. **Simple solutions that scale.** Avoid over-engineering. The simplest solution that reliably solves the problem and can grow is the right one.
 4. **Document important decisions.** Record architectural deviations, patterns, and new standards in documentation.
 5. **Never break what already works.** Understand full blast radius before refactoring.
-6. **Dynamic Operating Modes:** The user should never need to manually specify what role or framework to trigger. The agent dynamically classifies requests between:
-   - *(a) Surgical Focus / Fast-Track:* Direct Principal Engineer intervention for bugfixes, invariants, and minor tweaks (zero paperwork).
-   - *(b) Tactical Duo:* Product Designer + Principal Engineer for component/modal redesigns.
-   - *(c) Full Sprint Playbook:* PM Orchestrator leading the 5-phase loop for backlog features or structural changes.
+6. **Agile Delivery Flow (Dev ➔ QA ➔ Release Management ➔ Prod):**
+   - **Dev (`doing` ➔ `review`):** Implements code and checks acceptance criteria (`- [x]`). At completion, transitions task to `review`.
+   - **QA (`review` ➔ `ready`):** Audits under the Verification Pyramid. Transitions to `ready` as the **formal handover of development**.
+   - **Release Management (PO + Scrum/Delivery Lead):** Assembles releases by **delivered value** from all available `ready` items (historical or current).
+   - **Production Deployment (`ready` ➔ `done`):** Deployed package items become `done`.
+   - **Fundamental Invariant:** **No item can exist in production that is not in `done`**.
+7. **Decoupled Sprints & Releases:** Sprints and releases have no 1:1 coupling. Releases are created based on delivered value with any available `ready` items, with or without an active sprint.
+8. **Sprint Lifecycle & PO Sovereignty:** Sprints are fixed timeboxes. If items complete before the timebox expires, the PO expands scope with refined backlog items to prevent idle gaps. Sprints rarely conclude prematurely. The agent NEVER closes a sprint or triggers a retrospective by deduction; only upon explicit textual command from the PO.
+9. **Dynamic Operating Modes:** The user should never need to manually specify what role or framework to trigger. The agent dynamically classifies requests between:
+   - *(a) Mode 1: Surgical Focus / Fast-Track:* Direct Principal Engineer intervention for bugfixes, invariants, and minor tweaks (zero paperwork).
+   - *(b) Mode 2: Tactical Duo:* Product Designer + Principal Engineer for component/modal redesigns.
+   - *(c) Mode 3: Full Backlog & Sprint Flow:* Full agile delivery loop for backlog features or structural changes.
    See [.agents/TEAM_PLAYBOOK.md](file:///.agents/TEAM_PLAYBOOK.md).
-7. **Sub-Agent Autonomy (Parallelization vs. Atomic Focus):** Golden rule: *"Atomic focus on domain logic; parallel hands on exploration and verification"*. Dispatch sub-agents (browser testing in mobile viewports, benchmarks) autonomously, but preserve single-threaded atomic focus on state management, core business rules, and database schemas.
+10. **Sub-Agent Autonomy:** Golden rule: *"Atomic focus on domain logic; parallel hands on exploration and verification"*. Dispatch sub-agents for benchmarks or non-blocking research, while preserving strict single-threaded focus on domain rules, schemas, and state invariants.
 
 ---
 
@@ -39,7 +47,14 @@
 
 ## Non-Negotiable Best Practices
 
-- **Zero Tolerance for Broken Builds:** Validate every code change with your project's typechecker and test runner (e.g., `npm run build && npm test`).
+- **The Verification Pyramid (Zero-Waste Testing):**
+  Validate every code change in strict order:
+  1. Strict typechecking (e.g. `tsc --noEmit`, 0 errors).
+  2. Headless unit & integration tests (e.g. `npm test`, fast headless verification).
+  3. Spec & backlog consistency checks.
+  4. Production build (e.g. `npm run build`).
+  > [!CAUTION]
+  > **Anti-Browser-Subagent Inefficiency:** Prohibited to invoke `browser_subagent` for logic, state, API contracts, or persistence that can be audited headlessly in milliseconds. Reserved strictly for static-undeducible visual CSS/layout issues or explicit user requests.
 - **Controlled Inputs:** Every form input must have a defined initial value (e.g. `""`, never `undefined`) to avoid uncontrolled-to-controlled warnings.
 - **Security First:** Always validate and sanitize inputs at application boundaries. Enforce strict authorization and never expose private keys or secrets.
 - **Mobile First & Ergonomics:**

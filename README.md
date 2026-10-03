@@ -1,6 +1,6 @@
 # ⚡ Agentic Team Playbook
 
-> **Autonomous multi-agent agile framework for modern software development with dynamic modes and sub-agent orchestration.**
+> **Autonomous multi-agent agile framework for modern software development with dynamic modes, decoupled releases, and sub-agent orchestration.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/pablojavierrodriguez/agentic-team-playbook/pulls)
@@ -32,15 +32,15 @@ The developer never has to manually specify *"activate the designer"* or *"open 
            ┌─────────────────────────┼─────────────────────────┐
            ▼                         ▼                         ▼
    [ MODE 1: FOCUS ]        [ MODE 2: DUO ]          [ MODE 3: SPRINT ]
-   Surgical Fast-Track       Tactical UX + Code       Full 5-Phase Playbook
-   ───────────────────────   ─────────────────────   ──────────────────────
+   Surgical Fast-Track       Tactical UX + Code       Full Agile Delivery Loop
+   ───────────────────────   ─────────────────────   ──────────────────────────
    • Targeted bugfixes       • Component redesign    • Strategic backlog epics
    • Calculation fixes       • Modals & sheets       • Database migrations
    • Linters & unit tests    • Touch targets (≥44px) • Multi-step workflows
-   ───────────────────────   ─────────────────────   ──────────────────────
-   Lead: Principal Eng.      Lead: Designer + Eng.   Lead: PM Orchestrator
-   Zero paperwork            Lightweight chat plan   Formal sprint runbook
-   Atomic verification       Quick visual QA         Browser subagent in QA
+   ───────────────────────   ─────────────────────   ──────────────────────────
+   Lead: Principal Eng.      Lead: Designer + Eng.   Lead: PO / PM Orchestrator
+   Zero paperwork            Lightweight chat plan   Formal delivery pipeline
+   Atomic verification       Quick visual QA         Verification Pyramid
 ```
 
 ---
@@ -50,20 +50,20 @@ The developer never has to manually specify *"activate the designer"* or *"open 
 > **"Atomic focus on domain logic; parallel hands on exploration and verification."**
 
 ### 🟢 When to Parallelize (Spawn Sub-Agents):
-- **Autonomous Browser QA (`browser_subagent`):** Navigate mobile viewports (375px/390px), stress-test inputs, and detect unhandled console errors or layout shifts asynchronously.
+- **Visual Layout Auditing (`browser_subagent`):** Reserved exclusively for visual layout/CSS issues not deducible statically, complex responsive rendering, or upon explicit user request.
 - **Exploratory Benchmarking:** Research industry standards (Linear, Stripe, Notion) without cluttering the active codebase context.
 - **Accessibility & Performance Auditing:** Automated WCAG 2.1 AA checks and render profilers.
 
 ### 🔴 When to Keep Atomic Single-Thread Focus:
 - **Core Domain Logic & State Invariants:** State mutations and critical business invariants demand deterministic, single-threaded execution to prevent race conditions.
 - **Database Schema & Migrations:** Schema foundations and RLS policies must be authored by a single architectural mind.
-- **Global State Management:** Context providers and local persistence caches.
+- **Global State Management & Parsers:** Context providers, local persistence caches, and backlog parsers require complete end-to-end consistency.
 
 ---
 
-## 🔄 The 5-Phase Sprint Loop
+## 🔄 The Agile Delivery Flow (The 5 Phases)
 
-For strategic features (Mode 3), the team orchestrates a rigorous feedback loop:
+For strategic features and backlog epics (Mode 3), the team orchestrates a rigorous, value-driven feedback loop:
 
 ```
        [ 1. Discovery & PM ] (pm-orchestrator)
@@ -75,21 +75,33 @@ For strategic features (Mode 3), the team orchestrates a rigorous feedback loop:
        [ 3. Design & Motion ] (worldclass-product-designer)   │
                  │                                            │
                  ▼                                            │
-       [ 4. Engineering & Build ] (principal-engineer)        │
-                 │                                            │
-                 ▼                                            │
-       [ 5. QA Sentinel & Audit ] (rigorous-qa-auditor) ──────┘
-                 │
-                 ▼ (Unanimous Signoff)
-          [ Sprint Demo ] ──► [ Feedback to Rules / Skills ]
+       [ 4. Dev Execution ] (principal-engineer) ─────────────┘
+                 │ status: doing ➔ review
+                 ▼
+       [ 5. QA Sentinel & Audit ] (rigorous-qa-auditor)
+                 │ status: review ➔ ready (Formal Handover)
+                 ▼
+       [ Release Management & Prod ] (PO + Delivery Lead)
+                 │ status: ready ➔ done (Deployed to Prod)
+                 ▼
+          [ Knowledge Feeder ] ──► [ Feedback to Rules / Skills ]
 ```
 
-1. **PM Orchestrator:** Initializes `docs/sprints/SPRINT-XXX.md`, defines problem scope, target user, and Definition of Done.
+1. **PM Orchestrator / PO:** Initializes `docs/sprints/SPRINT-XXX.md` (or backlog task), defines problem scope, target user, and acceptance criteria.
 2. **Market Researcher:** Identifies UX benchmarks, anti-patterns, and domain edge cases from industry leaders.
 3. **World-Class Product Designer:** Defines visual hierarchy, semantic color tokens, 44px touch ergonomics, and micro-interactions.
-4. **Principal Engineer:** Delivers modular, strictly typed code with zero compilation errors (`tsc` / `build` checks).
-5. **Rigorous QA Auditor:** Audits mobile responsiveness, console cleanliness, keyboard navigation, and approves the release.
-6. **Knowledge Feeder:** Feeds lessons learned back into permanent project rules so no mistake is repeated twice.
+4. **Principal Engineer (Dev Execution):** Delivers modular, strictly typed code adhering to domain invariants. Ticks acceptance criteria in real time (`- [x]`). At completion, sets task status to `review`.
+5. **Rigorous QA Auditor (QA Gate):** Audits under the **Verification Pyramid** (`tsc` ➔ headless tests ➔ backlog check ➔ build). Once verified, marks the item as `ready`.
+   - **`ready` is the formal delivery of development:** The item is certified and immediately available for release packaging.
+6. **Release Management (PO + Scrum/Delivery Lead):** Assembles release packages based strictly on **delivered value** from all available `ready` items (historical or current).
+   - **Decoupled Sprints & Releases:** Sprints and releases have no 1:1 coupling. Releases are created based on delivered value, with or without an active sprint.
+   - **Production Deployment (`ready` ➔ `done`):** Upon deploying to production (main cloud), packaged items transition to `done`.
+   - **Fundamental Invariant:** **No item can exist in production that is not in `done`**.
+7. **Sprint Timebox & Continuous Productivity (PO Sovereignty):**
+   - Sprints finish by timebox (fixed duration), regardless of progress. Uncompleted items are replanned.
+   - If items complete early, the PO expands scope with refined backlog items to maintain productivity.
+   - The agent **NEVER** closes a sprint or executes a retrospective autonomously; only upon explicit textual command from the PO.
+8. **Knowledge Feeder:** Feeds lessons learned back into permanent project rules so no mistake is repeated twice.
 
 ---
 
@@ -168,12 +180,16 @@ While this framework works standalone with any standard AI coding assistant, pai
 
 ## 🇪🇸 Resumen en Español
 
-**Agentic Team Playbook** es un framework de gobernanza y desarrollo multi-agente para transformar asistentes de IA en un equipo de ingeniería de alto rendimiento:
+**Agentic Team Playbook** es un framework de gobernanza y desarrollo ágil multi-agente para transformar asistentes de IA en un equipo de ingeniería de alto rendimiento:
 
-- **Autonomía sin burocracia:** Clasificación dinámica entre *Foco Quirúrgico* (fixes directos sin papeleo), *Dúo Táctico* (UX + Código) y *Sprint Playbook* (épicas del backlog).
-- **Subagentes inteligentes:** Delega autónomamente tareas paralelas a subagentes (navegación y QA en mobile 375px) mientras preserva foco atómico secuencial en modelos de datos y reglas de negocio.
+- **Autonomía sin burocracia:** Clasificación dinámica entre *Foco Quirúrgico* (fixes directos sin papeleo), *Dúo Táctico* (UX + Código) y *Sprint & Backlog Flow* (flujo ágil formal de entrega).
+- **Flujo Ágil Canónico (Dev ➔ QA ➔ Release Management ➔ Prod):** Los desarrollos se entregan formalmente en `ready` (el dev implementa en `doing` y pasa a `review`; QA audita y formaliza la entrega en `ready`). Release Management agrupa ítems en `ready` por valor entregado para armar versiones. Al desplegar a producción (main cloud), pasan a `done`.
+- **Invariante Fundamental:** No puede haber un ítem en producción que no esté en `done`.
+- **Desacople Sprint vs. Release:** Los releases se arman exclusivamente por valor entregado con ítems disponibles en `ready`, con o sin sprint activo, con ítems históricos o del sprint en curso.
+- **Sprints Timeboxeados y Soberanía del PO:** El sprint concluye por vencimiento del timebox (duración fija). Si los ítems se entregan antes, el PO amplía el alcance con nuevos ítems del backlog para mantener la productividad continua. Prohibido cerrar sprints o ejecutar retros por deducción propia (solo por orden textual explícita del PO).
+- **Pirámide de Verificación (Cero Desperdicio):** `tsc` ➔ `npm test` ➔ `backlog/spec check` ➔ `build`. Browser subagents reservados exclusivamente para CSS/layouts visuales no deducibles estáticamente.
 - **Drop-in universal:** Funciona en cualquier tecnología (React, Vue, Node, Python, Go, Swift) copiando la carpeta `.agents/` a tu repositorio.
-- **Potenciación con MCP Oficiales:** Compatible con servidores MCP (GitHub, Puppeteer/DevTools, PostgreSQL) configurados en tu entorno local para dotar a los roles de interacción real con navegador, issues y bases de datos.
+- **Potenciación con MCP Oficiales:** Compatible con servidores MCP (GitHub, Puppeteer/DevTools, PostgreSQL) configurados en tu entorno local.
 
 ---
 
