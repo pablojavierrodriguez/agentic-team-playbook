@@ -98,5 +98,5 @@ Este bug fue resuelto en el Dashboard mobile (v0.9.1).
 
 ## Referencia de implementación
 
-- Dashboard principal: ver `src/pages/Dashboard.tsx` y [SPEC-076 — Dashboard Improvements](../../docs/specs/SPEC-076-dashboard-improvements.md)
+- Dashboard principal: ver el componente de dashboard del proyecto y su spec en `docs/specs/` si existe.
 - Los KPI cards del dashboard usan sparklines (mini `LineChart` sin ejes ni tooltips) como indicador de tendencia.
