@@ -1,0 +1,5 @@
+{
+  "name": "fixture-react-app",
+  "private": true,
+  "dependencies": { "react": "^18.3.0", "date-fns": "^3.6.0", "framer-motion": "^11.0.0" }
+}
