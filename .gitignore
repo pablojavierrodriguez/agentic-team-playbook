@@ -30,3 +30,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+
+# Playbook sync artifacts
+# Backups are local recovery copies of overwritten framework files.
+# .playbook-lock.json is NOT ignored on purpose: in a consuming project it is
+# the audit trail that tells the sync which files carry local modifications.
+.playbook-backups/
+*.tgz
