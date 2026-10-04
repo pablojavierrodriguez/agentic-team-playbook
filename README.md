@@ -20,6 +20,52 @@ When pair-programming with AI coding agents (Claude Code, Cursor, Antigravity, C
 
 ---
 
+## 🧠 Under the Hood: Why "Agents" are Modular Skills (Not Daemon Swarms)
+
+A widespread misconception in AI-assisted development is that a "multi-agent team" requires running 5 independent LLM background processes communicating in an open-ended chat loop (e.g. CrewAI, AutoGen).
+
+In real-world software engineering, autonomous background swarms fail due to three critical pitfalls:
+1. **Git & State Collisions:** Concurrent processes modifying the same codebase lead to race conditions, overwritten code, and corrupted branch histories.
+2. **Context Bloat & Token Explosion:** Inter-agent chit-chat rapidly inflates context windows and multiplies API costs by 5x–10x with massive latency.
+3. **Hallucinatory Feedback Loops:** When one agent assumes an obsolete API or invalid type, subsequent agents validate it and build tests on top of false premises.
+
+### The Architecture: Role-Swapping via Progressive Disclosure
+
+The **Agentic Team Playbook** replaces chaotic swarms with a battle-tested pattern: **A Single Host Agent with Modular, Lazy-Loaded Skills**.
+
+```
+                   ┌──────────────────────────────────────────────┐
+                   │           HOST AGENT (Active Model)          │
+                   │    (Antigravity / Cursor / Claude Code)      │
+                   └──────────────────────┬───────────────────────┘
+                                          │
+                  Assumes specialized operational "hats" on demand
+                                          │
+            ┌─────────────────────────────┼─────────────────────────────┐
+            ▼                             ▼                             ▼
+   [ principal-engineer ]       [ rigorous-qa-auditor ]      [ worldclass-designer ]
+   • Strict TypeScript (0 any)  • Verification Pyramid       • 44px touch ergonomics
+   • 60 FPS Kanban rendering    • tsc + headless tests       • Semantic token system
+   • Deterministic Markdown/MCP • Zero unrequested commits   • Micro-animations
+```
+
+* **The Host Agent:** Your coding assistant acts as the sole execution engine interacting with your codebase.
+* **Skills as Contextual Hats:** Each role in `.agents/skills/` is a high-density, prompt-engineered operational manual. When moving an item from `doing` to `review`, the agent temporarily assumes the constraints of the `rigorous-qa-auditor`. It loads only the rules it needs, keeping the context clean.
+* **Deterministic Single Thread for Code:** All domain logic, schema migrations, and Git modifications are executed by a single mind in strict sequence to prevent race conditions.
+* **Ephemeral Sub-Agents Strictly for Non-State Operations:** True parallel sub-agents are reserved exclusively for side-car tasks that cannot corrupt state (e.g. headless browser audits with `browser_subagent` or web benchmarking).
+
+### ⚖️ Architectural Comparison: Swarms vs. Playbook
+
+| Dimension | Autonomous Swarms (CrewAI / AutoGen) | Agentic Team Playbook (Skills + Single Host) |
+| :--- | :--- | :--- |
+| **Execution Engine** | Multiple uncoordinated background bots | 1 Host Agent wearing specialized role hats sequentially |
+| **Token Economy** | 🔴 High (wasteful inter-agent chat) | 🟢 Surgical (progressive disclosure of context) |
+| **Git & File Safety** | 🔴 High risk of merge conflicts & races | 🟢 100% deterministic, single-threaded file mutations |
+| **Quality Gate** | "LLM grading another LLM" (hallucinatory) | **Mechanical Verification Pyramid** (`tsc`, tests, linters) |
+| **Human Governance** | 🔴 Opaque "black box" execution | 🟢 PO Sovereignty (exclusive authority on commits & releases) |
+
+---
+
 ## 🚦 Dynamic Decision Matrix (3 Operating Modes)
 
 The developer never has to manually specify *"activate the designer"* or *"open a sprint"*. The system classifies requests autonomously:
@@ -160,6 +206,17 @@ For environments like Antigravity IDE:
   `~/.gemini/config/skills/`
 - Every repository you open will immediately inherit the 5 specialized agent roles.
 
+### Option C: Universal One-Command Sync with `gripm` (Zero-Clone)
+
+If you have Node.js installed, you can initialize or update the latest Playbook standard into **ANY repository** (React, Python, Go, Rust, Swift) without cloning:
+
+```bash
+npx gripm playbook sync
+```
+
+* **Separation of Layers:** Safely installs and updates `.agents/skills/*` and core rules.
+* **Preservation Guarantee:** Strictly leaves your custom `AGENTS.md` and local backlog intact.
+
 ---
 
 ## 🔌 Supercharging Your Team with Official MCP Servers
@@ -183,11 +240,13 @@ While this framework works standalone with any standard AI coding assistant, pai
 **Agentic Team Playbook** es un framework de gobernanza y desarrollo ágil multi-agente para transformar asistentes de IA en un equipo de ingeniería de alto rendimiento:
 
 - **Autonomía sin burocracia:** Clasificación dinámica entre *Foco Quirúrgico* (fixes directos sin papeleo), *Dúo Táctico* (UX + Código) y *Sprint & Backlog Flow* (flujo ágil formal de entrega).
+- **Patrón Role-Swapping (Bajo el Capó):** En lugar de enjambres caóticos que queman tokens y colisionan en Git, un único Host Agent adopta skills modulares bajo demanda (*progressive disclosure*). Subagentes paralelos reservados exclusivamente para validaciones sin estado (browser headless o benchmarking).
 - **Flujo Ágil Canónico (Dev ➔ QA ➔ Release Management ➔ Prod):** Los desarrollos se entregan formalmente en `ready` (el dev implementa en `doing` y pasa a `review`; QA audita y formaliza la entrega en `ready`). Release Management agrupa ítems en `ready` por valor entregado para armar versiones. Al desplegar a producción (main cloud), pasan a `done`.
 - **Invariante Fundamental:** No puede haber un ítem en producción que no esté en `done`.
 - **Desacople Sprint vs. Release:** Los releases se arman exclusivamente por valor entregado con ítems disponibles en `ready`, con o sin sprint activo, con ítems históricos o del sprint en curso.
 - **Sprints Timeboxeados y Soberanía del PO:** El sprint concluye por vencimiento del timebox (duración fija). Si los ítems se entregan antes, el PO amplía el alcance con nuevos ítems del backlog para mantener la productividad continua. Prohibido cerrar sprints o ejecutar retros por deducción propia (solo por orden textual explícita del PO).
 - **Pirámide de Verificación (Cero Desperdicio):** `tsc` ➔ `npm test` ➔ `backlog/spec check` ➔ `build`. Browser subagents reservados exclusivamente para CSS/layouts visuales no deducibles estáticamente.
+- **Sincronización Universal sin Clonar:** Cualquier repositorio puede instalar o actualizar las skills oficiales ejecutando `npx gripm playbook sync`, preservando al 100% tu `AGENTS.md` particular.
 - **Drop-in universal:** Funciona en cualquier tecnología (React, Vue, Node, Python, Go, Swift) copiando la carpeta `.agents/` a tu repositorio.
 - **Potenciación con MCP Oficiales:** Compatible con servidores MCP (GitHub, Puppeteer/DevTools, PostgreSQL) configurados en tu entorno local.
 
