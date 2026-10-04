@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Canonicity detection.** When there is no lockfile baseline, the sync now asks the upstream commit history whether a local file matches any published revision of that path. A file that turns out to be an older canonical revision is moved forward instead of being reported as a conflict, so the first sync after a hand install no longer flags every untouched file. Requests are bounded per run and both failure modes fail safe: an unreachable history protects the file rather than overwriting it.
+- **`--adopt`** keeps every differing file, records it as the baseline, and touches nothing. `--no-history` skips the provenance lookup.
+- **Orphan detection.** Framework files present under `.agents/` that are no longer part of the install plan — the usual symptom of a version that moved them — are reported. Nothing is deleted.
+- **Tests for the sync layer**: the canonicity decision table, the provenance resolver against a stubbed GitHub, and orphan detection.
+
+### Fixed
+
+- **A local customisation was protected exactly once.** The lockfile recorded the local hash of a protected file, so on the next run the file matched its own baseline and was overwritten without warning. Customizations are now recorded in a dedicated `customizations` list and stay protected until `--force`.
+
+## [2.0.0] — 2026-10-04
+
+### Fixed
+
+- The README claimed the sync preserved local files; it now states exactly what is preserved.
+
 ## [2.0.0] — 2026-10-04
 
 ### Added
@@ -51,6 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - Duplicated git policy between `AGENTS.md` and `.agents/rules/git-workflow.md`. `AGENTS.md` now links to the rule file; the duplicate is gone.
+- The README claimed the sync preserved local files; it only ever preserved `AGENTS.md`.
 
 ### Known issues
 

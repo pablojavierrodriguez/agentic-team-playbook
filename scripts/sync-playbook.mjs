@@ -12,9 +12,13 @@
  *
  * Safety principles
  *   1. Reproducible: syncs from a pinned git ref, not from a moving branch.
- *   2. Non-destructive: a locally customised file is NEVER silently overwritten.
- *      It is detected via the lockfile, backed up, and skipped unless --force.
- *   3. Auditable: writes .playbook-lock.json with a sha256 per installed file.
+ *   2. Non-destructive: a file a human owns is NEVER silently overwritten. It is
+ *      recorded as a customization in the lockfile and protected on every
+ *      subsequent run until --force.
+ *   3. Evidence-based: when there is no lockfile baseline, the sync asks the
+ *      upstream history whether the local content is a published revision. An
+ *      older canonical file is moved forward; only genuinely modified files are
+ *      held back.
  *
  * Usage:
  *   node scripts/sync-playbook.mjs [options]
@@ -26,13 +30,17 @@
  *   --stack <name>     Also install an optional stack pack (repeatable)
  *   --list-stacks      List available stack packs and exit
  *   --init-agents      Create AGENTS.md from the template when absent
+ *   --adopt            Keep every differing file as-is and record it as the
+ *                      baseline to track. Nothing is overwritten.
  *   --dry-run          Report what would change, write nothing
- *   --force            Overwrite locally customised files
+ *   --force            Overwrite customised files
+ *   --no-history       Skip the upstream provenance lookup (faster, protects
+ *                      anything unrecognised without checking)
  *   --yes              Never prompt
  *   --no-manifest      Do not write the lockfile
  *   --help             Show usage
  *
- * Exit codes: 0 ok · 1 completed with skipped/conflicts · 2 fatal
+ * Exit codes: 0 ok · 1 protected files or orphans present · 2 fatal
  */
 
 import fs from 'node:fs';
@@ -199,13 +207,133 @@ function printBanner(targetRepo, remote, ref, pinned, stacks) {
 
 function readLock(targetRepo) {
   const lockPath = path.join(targetRepo, LOCK_PATH);
-  if (!fs.existsSync(lockPath)) return { version: null, ref: null, files: {} };
+  const empty = { playbook: null, ref: null, version: null, files: {}, customizations: [] };
+  if (!fs.existsSync(lockPath)) return empty;
   try {
     const lock = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
-    return { version: lock.version || null, ref: lock.ref || null, files: lock.files || {} };
+    return {
+      playbook: lock.playbook || null,
+      ref: lock.ref || null,
+      version: lock.version || null,
+      files: lock.files || {},
+      customizations: Array.isArray(lock.customizations) ? lock.customizations : [],
+    };
   } catch {
-    return { version: null, ref: null, files: {} };
+    return empty;
   }
+}
+
+// ---------------------------------------------------------------------------
+// canonicity
+//
+// "Is this local file an older published version, or did a human edit it?"
+//
+// Answering that requires provenance, not just a hash comparison against the
+// current ref. When a project has no lockfile yet — the first sync after
+// installing the framework by hand — every file that differs from upstream
+// looks identical: a v1 skill that nobody touched and a skill someone heavily
+// edited both raise the same flag.
+//
+// The upstream commit history for the path is the only available evidence, so
+// the sync asks it: if the local content matches any published revision of that
+// path, it is canonical and safe to move forward. If it matches none, it is a
+// local modification and is protected.
+// ---------------------------------------------------------------------------
+
+const HISTORY_LIMIT = 25;
+const HISTORY_BUDGET = 40;
+
+function makeBudget(limit) {
+  let left = limit;
+  return {
+    take() {
+      if (left <= 0) return false;
+      left -= 1;
+      return true;
+    },
+    get remaining() { return left; },
+  };
+}
+
+async function listFileHistory(remote, filePath, limit) {
+  const url = `https://api.github.com/repos/${remote}/commits?path=${encodeURIComponent(filePath)}&per_page=${limit}`;
+  try {
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      headers: { 'user-agent': 'agentic-team-playbook-sync', accept: 'application/vnd.github+json' },
+    });
+    if (!res.ok) return null;
+    const commits = await res.json();
+    return Array.isArray(commits) ? commits.map((commit) => commit.sha) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * @returns {Promise<{status:'canonical'|'custom'|'unknown', sha?:string}>}
+ */
+export async function findCanonicalProvenance(remote, filePath, localContent, budget = makeBudget(HISTORY_BUDGET)) {
+  const revisions = await listFileHistory(remote, filePath, HISTORY_LIMIT);
+  if (!revisions) return { status: 'unknown', reason: 'history unavailable' };
+
+  for (const sha of revisions) {
+    if (!budget.take()) return { status: 'unknown', reason: 'history budget exhausted' };
+    let content = null;
+    try {
+      content = await fetchRemoteFile(remote, sha, filePath);
+    } catch {
+      continue;
+    }
+    if (content !== null && content === localContent) return { status: 'canonical', sha };
+  }
+
+  return { status: 'custom' };
+}
+
+/**
+ * Pure decision table, exported for testing.
+ *
+ * 'managed'       → safe to move to the upstream revision
+ * 'customization' → a human owns this file; never touch it without --force
+ * 'unknown'       → no baseline yet, provenance must be resolved upstream
+ */
+export function classifyLocalFile({ localHash, knownHash, wasCustomization }) {
+  if (wasCustomization) return 'customization';
+  if (knownHash && knownHash === localHash) return 'managed';
+  if (knownHash) return 'customization';
+  return 'unknown';
+}
+
+/** Files that belong to the framework but are no longer part of the plan. */
+export function findOrphanedFiles(targetRepo, plannedFiles) {
+  const agentsRoot = path.join(targetRepo, '.agents');
+  if (!fs.existsSync(agentsRoot)) return [];
+
+  const planned = new Set(plannedFiles);
+  const orphans = [];
+
+  const walk = (dir) => {
+    let entries;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(full);
+        continue;
+      }
+      if (!entry.name.endsWith('.md')) continue;
+      const rel = path.relative(targetRepo, full).split(path.sep).join('/');
+      if (!planned.has(rel)) orphans.push(rel);
+    }
+  };
+
+  walk(agentsRoot);
+  return orphans;
 }
 
 function prompt(question) {
@@ -249,8 +377,16 @@ export async function runPlaybookSync(targetRepo = process.cwd(), options = {}) 
 
   const lock = readLock(targetRepo);
   const nextLockFiles = {};
+  const nextCustomizations = new Set(lock.customizations);
 
-  const stats = { created: 0, updated: 0, unchanged: 0, protected: 0, missingUpstream: 0 };
+  const adopt = !!options.adopt;
+  const checkHistory = options.history !== false;
+  const budget = makeBudget(HISTORY_BUDGET);
+
+  const stats = {
+    created: 0, updated: 0, unchanged: 0, adopted: 0,
+    protected: 0, recognizedCanonical: 0, missingUpstream: 0,
+  };
   const protectedFiles = [];
   const backupRoot = path.join(targetRepo, '.playbook-backups');
 
@@ -295,26 +431,62 @@ export async function runPlaybookSync(targetRepo = process.cwd(), options = {}) 
       continue;
     }
 
-    // The file differs from upstream. Was it ours, or edited locally?
-    const knownHash = lock.files[relativePath];
-    const isLocalCustomisation = !knownHash || knownHash !== localHash;
+    // The file differs from upstream. Is it an older canonical revision, or
+    // did a human edit it?
+    let classification = classifyLocalFile({
+      localHash,
+      knownHash: lock.files[relativePath],
+      wasCustomization: lock.customizations.includes(relativePath),
+    });
 
-    if (isLocalCustomisation && !force) {
-      protectedFiles.push(relativePath);
-      console.log(`  🛡️  [Protected]   ${relativePath} (local edits — use --force to overwrite)`);
-      stats.protected += 1;
-      // Preserve the local hash so the decision is stable across runs.
+    // --adopt means "keep what I have, and start tracking it". Nothing that
+    // differs is touched, so there is no reason to spend requests on
+    // provenance.
+    if (adopt && classification !== 'managed' && !force) {
       nextLockFiles[relativePath] = localHash;
+      nextCustomizations.delete(relativePath);
+      console.log(`  🧩 [Adopted]      ${relativePath} (local content recorded as the baseline)`);
+      stats.adopted += 1;
       continue;
     }
 
-    if (!assumeYes && !isDryRun) {
+    let provenance = null;
+    if (classification === 'unknown' && checkHistory && !force) {
+      provenance = await findCanonicalProvenance(remote, relativePath, localContent, budget);
+      if (provenance.status === 'canonical') {
+        classification = 'managed';
+        stats.recognizedCanonical += 1;
+      } else {
+        // 'custom' and 'unknown' both fail safe: never touch it silently.
+        classification = 'customization';
+      }
+    } else if (classification === 'unknown') {
+      classification = 'customization';
+    }
+
+    if (classification === 'customization' && !force) {
+      protectedFiles.push(relativePath);
+      nextCustomizations.add(relativePath);
+      nextLockFiles[relativePath] = localHash;
+
+      const detail = provenance && provenance.reason
+        ? provenance.reason
+        : provenance && provenance.status === 'custom'
+          ? 'no published revision matches'
+          : 'local edits';
+      console.log(`  🛡️  [Protected]   ${relativePath} (${detail} — tracked as a customization)`);
+      stats.protected += 1;
+      continue;
+    }
+
+    if (!assumeYes && !isDryRun && !force) {
       const ok = await prompt(`  Overwrite locally modified ${relativePath}?`);
       if (!ok) {
         protectedFiles.push(relativePath);
+        nextCustomizations.add(relativePath);
+        nextLockFiles[relativePath] = localHash;
         console.log(`  🛡️  [Protected]   ${relativePath} (skipped by user)`);
         stats.protected += 1;
-        nextLockFiles[relativePath] = localHash;
         continue;
       }
     }
@@ -326,7 +498,14 @@ export async function runPlaybookSync(targetRepo = process.cwd(), options = {}) 
       fs.writeFileSync(targetFile, remoteContent, 'utf8');
     }
 
-    console.log(`  🔄 [Updated]     ${relativePath}${isLocalCustomisation ? ' (local edits backed up)' : ''}`);
+    // The human's version is being replaced, so it is no longer a customization.
+    nextCustomizations.delete(relativePath);
+
+    const note = provenance && provenance.status === 'canonical'
+      ? ' (recognized as an older canonical revision)'
+      : classification === 'customization' ? ' (local edits backed up)' : '';
+
+    console.log(`  🔄 [Updated]     ${relativePath}${note}`);
     stats.updated += 1;
     nextLockFiles[relativePath] = remoteHash;
   }
@@ -360,25 +539,47 @@ export async function runPlaybookSync(targetRepo = process.cwd(), options = {}) 
       stacks,
       syncedAt: new Date().toISOString(),
       files: nextLockFiles,
+      customizations: [...nextCustomizations].sort(),
     };
     fs.writeFileSync(path.join(targetRepo, LOCK_PATH), `${JSON.stringify(lockPayload, null, 2)}\n`, 'utf8');
-    console.log(`  🔏 [Lockfile]    ${LOCK_PATH} (${Object.keys(nextLockFiles).length} files)`);
+    console.log(`  🔏 [Lockfile]    ${LOCK_PATH} (${Object.keys(nextLockFiles).length} files, ${nextCustomizations.size} customizations)`);
   }
+
+  const orphans = isDryRun ? [] : findOrphanedFiles(targetRepo, files);
 
   console.log('');
   console.log('📊 Summary');
   console.log(`   created:   ${stats.created}`);
   console.log(`   updated:   ${stats.updated}`);
   console.log(`   unchanged: ${stats.unchanged}`);
+  if (stats.adopted) console.log(`   adopted:   ${stats.adopted}`);
+  if (stats.recognizedCanonical) {
+    console.log(`   canonical: ${stats.recognizedCanonical}  (older revision recognized, updated forward)`);
+  }
   console.log(`   protected: ${stats.protected}  (local modifications kept)`);
   if (stats.missingUpstream) console.log(`   missing:   ${stats.missingUpstream}  (not found upstream at ${ref})`);
+  if (budget.remaining < HISTORY_BUDGET) {
+    console.log(`   note:      provenance lookups used ${HISTORY_BUDGET - budget.remaining}/${HISTORY_BUDGET} requests`);
+  }
 
   if (protectedFiles.length) {
     console.log('');
-    console.log('   Locally modified files that were NOT overwritten:');
+    console.log('   Files a human owns. They are recorded in the lockfile and will');
+    console.log('   keep being protected on every future sync:');
     for (const file of protectedFiles) console.log(`     - ${file}`);
-    console.log('   Re-run with --force to replace them with the canonical version.');
-    console.log(`   Backups of overwritten files land in ${path.relative(targetRepo, backupRoot) || '.playbook-backups'}/.`);
+    console.log('   Re-run with --force to replace them, or --adopt to accept them as');
+    console.log('   the baseline you want to keep updating from.');
+  }
+
+  if (orphans.length) {
+    console.log('');
+    console.log('   ⚠️  Framework files no longer part of the install plan (a previous');
+    console.log('      version may have moved them). Nothing was deleted:');
+    for (const file of orphans) console.log(`     - ${file}`);
+    console.log('   Review and remove them manually if they are obsolete.');
+  }
+
+  if (protectedFiles.length || orphans.length) {
     process.exitCode = 1;
   } else if (stats.missingUpstream) {
     console.log('');
@@ -390,7 +591,7 @@ export async function runPlaybookSync(targetRepo = process.cwd(), options = {}) 
   }
   console.log('');
 
-  return { ...stats, protectedFiles, ref, manifestFound: !!manifest };
+  return { ...stats, protectedFiles, orphans, ref, manifestFound: !!manifest };
 }
 
 async function listStacks(remote) {
@@ -420,7 +621,8 @@ function parseArgs(argv) {
   const opts = {
     repo: process.cwd(), tag: null, remote: DEFAULT_REMOTE, stacks: [],
     initAgents: false, dryRun: false, force: false, yes: false,
-    manifest: true, listStacks: false, help: false,
+    manifest: true, adopt: false, history: true,
+    listStacks: false, help: false,
   };
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -435,6 +637,8 @@ function parseArgs(argv) {
       case '--init-agents': opts.initAgents = true; break;
       case '--dry-run': opts.dryRun = true; break;
       case '--force': opts.force = true; break;
+      case '--adopt': opts.adopt = true; break;
+      case '--no-history': opts.history = false; break;
       case '--yes': case '-y': opts.yes = true; break;
       case '--no-manifest': opts.manifest = false; break;
       case '--list-stacks': opts.listStacks = true; break;

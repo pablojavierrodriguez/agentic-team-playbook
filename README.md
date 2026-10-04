@@ -226,12 +226,16 @@ node scripts/sync-playbook.mjs --stack react
 | Guarantee | Behaviour |
 | :--- | :--- |
 | Your `AGENTS.md` is never overwritten | Preserved, always. Created only with `--init-agents`. |
-| Local customisations are never silently lost | Detected via `.playbook-lock.json`, reported as `[Protected]`, requires `--force`. |
+| Files a human owns are never silently lost | Detected, recorded in `.playbook-lock.json` under `customizations`, and protected on **every** subsequent run until `--force`. |
+| Older canonical files are recognised, not blocked | With no lockfile, the sync asks the upstream history whether the local content is a published revision. If it is, it moves forward silently instead of reporting a false conflict. |
 | Overwrites are reversible | Previous version stored under `.playbook-backups/<ref>/`. |
 | Reproducible | Syncs from a pinned git ref, not a moving branch. |
-| Auditable | `.playbook-lock.json` records a sha256 per installed file. |
+| Auditable | `.playbook-lock.json` records a sha256 per file plus the customization list. |
+| Moved files are surfaced | Framework files no longer in the install plan are reported as orphans. Nothing is deleted. |
 
-Useful flags: `--dry-run`, `--tag <ref>`, `--force`, `--yes`, `--list-stacks`, `--no-manifest`.
+Useful flags: `--dry-run`, `--tag <ref>`, `--adopt`, `--force`, `--no-history`, `--yes`, `--list-stacks`, `--no-manifest`.
+
+**Migrating from a hand-installed copy.** The first sync has no lockfile, so it cannot tell an untouched v1 skill from an edited one. It resolves that by asking the upstream history. If you would rather not spend those requests, `--no-history` protects anything unrecognised, or `--adopt` keeps every differing file and records it as the baseline you want to keep updating from.
 
 ### Option C — Global installation
 
