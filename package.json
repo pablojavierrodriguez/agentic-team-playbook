@@ -1,0 +1,50 @@
+{
+  "name": "agentic-team-playbook",
+  "version": "1.0.0",
+  "description": "Autonomous multi-agent agile framework for modern software development with dynamic modes, decoupled releases, and sub-agent orchestration.",
+  "type": "module",
+  "main": "./scripts/sync-playbook.mjs",
+  "bin": {
+    "agentic-team-playbook": "./scripts/sync-playbook.mjs"
+  },
+  "scripts": {
+    "sync": "node scripts/sync-playbook.mjs",
+    "playbook:sync": "node scripts/sync-playbook.mjs",
+    "audit:ux": "node scripts/audit-ux-code.cjs"
+  },
+  "keywords": [
+    "agentic",
+    "agile",
+    "ai",
+    "llm",
+    "multi-agent",
+    "framework",
+    "playbook",
+    "skills",
+    "antigravity",
+    "cursor",
+    "claude-code",
+    "copilot"
+  ],
+  "author": "Pablo Javier Rodríguez",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pablojavierrodriguez/agentic-team-playbook.git"
+  },
+  "homepage": "https://github.com/pablojavierrodriguez/agentic-team-playbook#readme",
+  "bugs": {
+    "url": "https://github.com/pablojavierrodriguez/agentic-team-playbook/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    ".agents",
+    "docs",
+    "scripts",
+    "AGENTS.md",
+    "LICENSE",
+    "README.md"
+  ]
+}
