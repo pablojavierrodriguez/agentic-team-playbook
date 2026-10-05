@@ -1,9 +1,9 @@
-# ⚡ Agentic Team Playbook
+# ⚡ Gripm Playbook
 
 > **Autonomous multi-agent agile framework for modern software development: dynamic modes, decoupled releases, and a single-threaded execution model.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/pablojavierrodriguez/agentic-team-playbook/pulls)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/pablojavierrodriguez/gripm-playbook/pulls)
 [![Architecture: Multi--Agent](https://img.shields.io/badge/Architecture-Multi--Agent-purple.svg)]()
 [![Focus: Zero--Bureaucracy](https://img.shields.io/badge/Focus-Zero--Bureaucracy-orange.svg)]()
 
@@ -33,19 +33,19 @@ In real software engineering, autonomous background swarms fail for three reason
 ### The architecture: role-swapping via progressive disclosure
 
 ```
-                ┌──────────────────────────────────────────────┐
-                       │           HOST AGENT (Active Model)   │
-                       │    (Antigravity / Cursor / Claude Code)│
-                       └──────────────────┬────────────────────┘
-                                          │
-                  Assumes specialized operational "hats" on demand
-                                          │
-            ┌─────────────────────────────┼─────────────────────────────┐
-            ▼                             ▼                             ▼
-   [ principal-engineer ]      [ rigorous-qa-auditor ]   [ worldclass-product-designer ]
-   • Strict typing             • Verification Pyramid      • Touch ergonomics ≥44px
-   • Domain invariants         • tsc + headless tests      • Semantic token system
-   • Sequential Git mutations  • Zero unrequested commits  • Micro-interactions
+                        ┌─────────────────────────────────────────┐
+                        │        HOST AGENT (Active Model)        │
+                        │   (Antigravity / Cursor / Claude Code)  │
+                        └────────────────────┬────────────────────┘
+                                             │
+                    Assumes specialized operational "hats" on demand
+                                             │
+             ┌───────────────────────────────┼───────────────────────────────┐
+             ▼                               ▼                               ▼
+  [ principal-engineer ]          [ rigorous-qa-auditor ]     [ worldclass-product-designer ]
+  • Strict typing                 • Verification Pyramid      • Touch ergonomics ≥44px
+  • Domain invariants             • tsc + headless tests      • Semantic token system
+  • Sequential Git mutations      • Zero unrequested commits  • Micro-interactions
 ```
 
 - **The host agent** is the sole execution engine interacting with your codebase.
@@ -192,7 +192,7 @@ The core layer is validated to contain **zero** references to any specific produ
 ### Option A — Project-level install (recommended)
 
 ```bash
-git clone https://github.com/pablojavierrodriguez/agentic-team-playbook.git temp-playbook
+git clone https://github.com/pablojavierrodriguez/gripm-playbook.git temp-playbook
 cp -r temp-playbook/.agents temp-playbook/docs temp-playbook/AGENTS.md ./
 cp temp-playbook/scripts/sync-playbook.mjs temp-playbook/scripts/audit-ux-code.cjs \
    temp-playbook/scripts/ux-rules.json temp-playbook/scripts/validate-repo.mjs scripts/ 2>/dev/null

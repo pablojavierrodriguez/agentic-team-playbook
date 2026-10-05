@@ -74,5 +74,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Configured for npm publication under `@gripm/playbook` supporting `npx @gripm/playbook sync`.
 
-[Unreleased]: https://github.com/pablojavierrodriguez/agentic-team-playbook/compare/v2.0.0...HEAD
-[2.0.0]: https://github.com/pablojavierrodriguez/agentic-team-playbook/releases/tag/v2.0.0
+[Unreleased]: https://github.com/pablojavierrodriguez/gripm-playbook/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/pablojavierrodriguez/gripm-playbook/releases/tag/v2.0.0

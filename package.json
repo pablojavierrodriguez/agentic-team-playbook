@@ -6,6 +6,7 @@
   "main": "./scripts/sync-playbook.mjs",
   "bin": {
     "playbook": "./scripts/sync-playbook.mjs",
+    "gripm-playbook": "./scripts/sync-playbook.mjs",
     "agentic-team-playbook": "./scripts/sync-playbook.mjs"
   },
   "scripts": {
@@ -37,11 +38,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pablojavierrodriguez/agentic-team-playbook.git"
+    "url": "git+https://github.com/pablojavierrodriguez/gripm-playbook.git"
   },
-  "homepage": "https://github.com/pablojavierrodriguez/agentic-team-playbook#readme",
+  "homepage": "https://github.com/pablojavierrodriguez/gripm-playbook#readme",
   "bugs": {
-    "url": "https://github.com/pablojavierrodriguez/agentic-team-playbook/issues"
+    "url": "https://github.com/pablojavierrodriguez/gripm-playbook/issues"
   },
   "engines": {
     "node": ">=18.0.0"
