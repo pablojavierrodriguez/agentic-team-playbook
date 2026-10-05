@@ -70,22 +70,22 @@ In real software engineering, autonomous background swarms fail for three reason
 You never have to say *"activate the designer"* or *"open a sprint"*.
 
 ```
-             ┌─────────────────────────────────────────────┐
-                         │        DEVELOPER PROMPT          │
-             └──────────────────────┬──────────────────────┘
-                                    │
-       ┌────────────────────────────┼────────────────────────────┐
-       ▼                            ▼                            ▼
-[ MODE 1: FOCUS ]          [ MODE 2: DUO ]            [ MODE 3: SPRINT ]
-Surgical Fast-Track       Tactical UX + Code          Full Agile Loop
-──────────────────   ─────────────────────────   ──────────────────────
-• Targeted bugfixes     • Component redesign         • Strategic backlog epics
-• Invariant fixes       • Modals & sheets            • Database migrations
-• Linter & unit tests   • Touch targets (≥44px)      • Multi-step workflows
-──────────────────   ─────────────────────────   ──────────────────────
-Lead: Principal Eng.    Designer + Principal Eng.    Lead: PM Orchestrator
-Zero paperwork          Lightweight chat plan        Formal delivery pipeline
-Atomic verification     Quick visual QA              Verification Pyramid
+                          ┌─────────────────────────────────┐
+                          │        DEVELOPER PROMPT         │
+                          └────────────────┬────────────────┘
+                                           │
+             ┌─────────────────────────────┼─────────────────────────────┐
+             ▼                             ▼                             ▼
+     [ MODE 1: FOCUS ]              [ MODE 2: DUO ]             [ MODE 3: SPRINT ]
+    Surgical Fast-Track           Tactical UX + Code             Full Agile Loop
+  ──────────────────────       ─────────────────────────      ──────────────────────
+  • Targeted bugfixes          • Component redesign           • Strategic backlog epics
+  • Invariant fixes            • Modals & sheets              • Database migrations
+  • Linter & unit tests        • Touch targets (≥44px)        • Multi-step workflows
+  ──────────────────────       ─────────────────────────      ──────────────────────
+  Lead: Principal Eng.         Designer + Principal Eng.      Lead: PM Orchestrator
+  Zero paperwork               Lightweight chat plan          Formal delivery pipeline
+  Atomic verification          Quick visual QA                Verification Pyramid
 ```
 
 ---
