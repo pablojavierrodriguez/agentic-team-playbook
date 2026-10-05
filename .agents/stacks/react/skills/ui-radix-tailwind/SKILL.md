@@ -160,7 +160,7 @@ Usar `py-4` en lugar de `pb-3` en `CardHeader` para centrado perfecto de element
 
 Al usar `Tabs` con contenido asíncrono (como gráficos o timelines) dentro de un `Dialog` que ajusta su altura de forma dinámica (`max-h-*`), el modal puede parpadear o redimensionarse abruptamente al cambiar de pestaña.
 Para evitar esto:
-1. Utilizar `forceMount` en los componentes `TabsContent`. Esto obliga a Radix a renderizar ambos paneles en el YourApp desde el inicio, precargando la altura y anulando el flicker.
+1. Utilizar `forceMount` en los componentes `TabsContent`. Esto obliga a Radix a renderizar ambos paneles desde el inicio, precargando la altura y anulando el flicker.
 2. Controlar la visibilidad mediante clases de CSS (ej: `data-[state=inactive]:hidden`) para que los paneles inactivos no interfieran.
 3. Asignar un contenedor scrollable (`overflow-y-auto`) a cada pestaña de forma independiente en lugar de asignar el scroll al Dialog global.
 

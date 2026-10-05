@@ -1,11 +1,11 @@
 ---
 name: mobile-ux-design
-description: Usar esta skill siempre que se diseñen, modifiquen o auditen interfaces móviles, vistas responsivas, modales/sheets en mobile, comportamiento con teclado virtual, touch targets, safe areas o integración de Capacitor en admin-portal.
+description: Usar esta skill siempre que se diseñen, modifiquen o auditen interfaces móviles, vistas responsivas, modales/sheets en mobile, comportamiento con teclado virtual, touch targets, safe areas o integración de capacidades nativas con Capacitor.
 ---
 
 # Mobile UX & Responsive Design Standards
 
-Guía de estándares para garantizar que admin-portal ofrezca una experiencia táctil y fluida de clase mundial tanto en navegadores móviles como en la app nativa (APK vía Capacitor).
+Guía de estándares para garantizar una experiencia táctil y fluida de clase mundial, tanto en navegadores móviles como en la app nativa empaquetada con Capacitor.
 
 ---
 
@@ -125,7 +125,7 @@ export const triggerWarningHaptic = async () => {
 
 ## 7. PWA Universal & Experiencia de Instalación (WebAPK / iOS / Desktop)
 
-Para permitir que los usuarios instalen admin-portal como una aplicación web progresiva independiente:
+Para permitir que los usuarios instalen la app como una aplicación web progresiva independiente:
 
 - **Hook de Instalación Centralizado (`usePWAInstall`):**
   - Capturar el evento `beforeinstallprompt` a nivel de ventana global y compartir el estado `isGuideOpen` y `promptAvailable` mediante un bus de listeners global para evitar instancias aisladas desincronizadas.

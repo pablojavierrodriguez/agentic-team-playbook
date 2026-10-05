@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ['20', '22']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      # The repo's own Verification Pyramid, in order.
+      - name: Validate repository consistency
+        run: npm run validate
+
+      - name: Rule engine tests
+        run: npm test
+
+      - name: Auditor must not crash on a project without src/
+        run: node scripts/audit-ux-code.cjs --format json
+
+      - name: Package contents sanity check
+        run: npm pack --dry-run

@@ -1,6 +1,6 @@
 # ⚡ Agentic Team Playbook
 
-> **Autonomous multi-agent agile framework for modern software development with dynamic modes, decoupled releases, and sub-agent orchestration.**
+> **Autonomous multi-agent agile framework for modern software development: dynamic modes, decoupled releases, and a single-threaded execution model.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/pablojavierrodriguez/agentic-team-playbook/pulls)
@@ -11,143 +11,142 @@
 
 ## 🎯 The Dilemma: Chaos vs. Bureaucracy
 
-When pair-programming with AI coding agents (Claude Code, Cursor, Antigravity, Copilot Workspace), development teams usually hit one of two extremes:
+When pair-programming with AI coding agents, teams usually hit one of two extremes:
 
 1. **Cowboy Coding (Chaos):** The agent jumps straight to hacking code, skips architecture, breaks mobile responsiveness, introduces subtle type errors, and makes vague commits.
-2. **Analysis Paralysis (Over-Engineering):** The agent asks questions at every step, opens a 10-page specification doc for a 2-line typo fix, and requires the user to manually act as an exhausted Scrum Master.
+2. **Analysis Paralysis (Over-Engineering):** The agent asks questions at every step, opens a 10-page specification for a 2-line typo fix, and requires the user to act as an exhausted Scrum Master.
 
-**Agentic Team Playbook** solves this by establishing an **autonomous, self-governing multi-agent system** that dynamically selects the right gear according to task complexity.
+This framework resolves it with a self-governing system that dynamically selects the right gear per task complexity.
 
 ---
 
-## 🧠 Under the Hood: Why "Agents" are Modular Skills (Not Daemon Swarms)
+## 🧠 Under the Hood: "Agents" Are Skills, Not Swarms
 
-A widespread misconception in AI-assisted development is that a "multi-agent team" requires running 5 independent LLM background processes communicating in an open-ended chat loop (e.g. CrewAI, AutoGen).
+A widespread misconception is that a "multi-agent team" requires running 5 independent LLM background processes in an open-ended chat loop (CrewAI, AutoGen).
 
-In real-world software engineering, autonomous background swarms fail due to three critical pitfalls:
-1. **Git & State Collisions:** Concurrent processes modifying the same codebase lead to race conditions, overwritten code, and corrupted branch histories.
-2. **Context Bloat & Token Explosion:** Inter-agent chit-chat rapidly inflates context windows and multiplies API costs by 5x–10x with massive latency.
-3. **Hallucinatory Feedback Loops:** When one agent assumes an obsolete API or invalid type, subsequent agents validate it and build tests on top of false premises.
+In real software engineering, autonomous background swarms fail for three reasons:
 
-### The Architecture: Role-Swapping via Progressive Disclosure
+1. **Git & state collisions.** Concurrent processes mutating the same codebase produce race conditions, overwritten code and corrupted branch history.
+2. **Context bloat & token explosion.** Inter-agent chatter inflates context windows and multiplies cost by 5–10x with high latency.
+3. **Hallucinatory feedback loops.** When one agent assumes an obsolete API, the next one validates it and builds on a false premise.
 
-The **Agentic Team Playbook** replaces chaotic swarms with a battle-tested pattern: **A Single Host Agent with Modular, Lazy-Loaded Skills**.
+### The architecture: role-swapping via progressive disclosure
 
 ```
-                   ┌──────────────────────────────────────────────┐
-                   │           HOST AGENT (Active Model)          │
-                   │    (Antigravity / Cursor / Claude Code)      │
-                   └──────────────────────┬───────────────────────┘
+                ┌──────────────────────────────────────────────┐
+                       │           HOST AGENT (Active Model)   │
+                       │    (Antigravity / Cursor / Claude Code)│
+                       └──────────────────┬────────────────────┘
                                           │
                   Assumes specialized operational "hats" on demand
                                           │
             ┌─────────────────────────────┼─────────────────────────────┐
             ▼                             ▼                             ▼
-   [ principal-engineer ]       [ rigorous-qa-auditor ]      [ worldclass-designer ]
-   • Strict TypeScript (0 any)  • Verification Pyramid       • 44px touch ergonomics
-   • 60 FPS Kanban rendering    • tsc + headless tests       • Semantic token system
-   • Deterministic Markdown/MCP • Zero unrequested commits   • Micro-animations
+   [ principal-engineer ]      [ rigorous-qa-auditor ]   [ worldclass-product-designer ]
+   • Strict typing             • Verification Pyramid      • Touch ergonomics ≥44px
+   • Domain invariants         • tsc + headless tests      • Semantic token system
+   • Sequential Git mutations  • Zero unrequested commits  • Micro-interactions
 ```
 
-* **The Host Agent:** Your coding assistant acts as the sole execution engine interacting with your codebase.
-* **Skills as Contextual Hats:** Each role in `.agents/skills/` is a high-density, prompt-engineered operational manual. When moving an item from `doing` to `review`, the agent temporarily assumes the constraints of the `rigorous-qa-auditor`. It loads only the rules it needs, keeping the context clean.
-* **Deterministic Single Thread for Code:** All domain logic, schema migrations, and Git modifications are executed by a single mind in strict sequence to prevent race conditions.
-* **Ephemeral Sub-Agents Strictly for Non-State Operations:** True parallel sub-agents are reserved exclusively for side-car tasks that cannot corrupt state (e.g. headless browser audits with `browser_subagent` or web benchmarking).
+- **The host agent** is the sole execution engine interacting with your codebase.
+- **Skills are contextual hats.** Each skill in `.agents/skills/` is a dense operational manual loaded only when needed, keeping context clean.
+- **Deterministic single thread for code.** Domain logic, schemas and Git mutations run in one sequential mind to prevent races.
+- **Sub-agents strictly for stateless work.** True parallelism is reserved for research and non-stateful verification.
 
-### ⚖️ Architectural Comparison: Swarms vs. Playbook
+### ⚖️ Swarms vs. this playbook
 
-| Dimension | Autonomous Swarms (CrewAI / AutoGen) | Agentic Team Playbook (Skills + Single Host) |
+| Dimension | Autonomous swarms (CrewAI / AutoGen) | Agentic Team Playbook |
 | :--- | :--- | :--- |
-| **Execution Engine** | Multiple uncoordinated background bots | 1 Host Agent wearing specialized role hats sequentially |
-| **Token Economy** | 🔴 High (wasteful inter-agent chat) | 🟢 Surgical (progressive disclosure of context) |
-| **Git & File Safety** | 🔴 High risk of merge conflicts & races | 🟢 100% deterministic, single-threaded file mutations |
-| **Quality Gate** | "LLM grading another LLM" (hallucinatory) | **Mechanical Verification Pyramid** (`tsc`, tests, linters) |
-| **Human Governance** | 🔴 Opaque "black box" execution | 🟢 PO Sovereignty (exclusive authority on commits & releases) |
+| **Execution engine** | Multiple uncoordinated bots | 1 host agent wearing role hats sequentially |
+| **Token economy** | 🔴 High (wasteful inter-agent chat) | 🟢 Surgical (progressive disclosure) |
+| **Git & file safety** | 🔴 Race conditions & merge conflicts | 🟢 Deterministic single-threaded mutations |
+| **Quality gate** | "LLM grading another LLM" | 🟢 **Mechanical** Verification Pyramid (`tsc`, tests, build) |
+| **Human governance** | 🔴 Opaque execution | 🟢 PO sovereignty over commits & releases |
 
 ---
 
 ## 🚦 Dynamic Decision Matrix (3 Operating Modes)
 
-The developer never has to manually specify *"activate the designer"* or *"open a sprint"*. The system classifies requests autonomously:
+You never have to say *"activate the designer"* or *"open a sprint"*.
 
 ```
-                  ┌─────────────────────────────────────┐
-                  │          DEVELOPER PROMPT           │
-                  └──────────────────┬──────────────────┘
-                                     │
-           ┌─────────────────────────┼─────────────────────────┐
-           ▼                         ▼                         ▼
-   [ MODE 1: FOCUS ]        [ MODE 2: DUO ]          [ MODE 3: SPRINT ]
-   Surgical Fast-Track       Tactical UX + Code       Full Agile Delivery Loop
-   ───────────────────────   ─────────────────────   ──────────────────────────
-   • Targeted bugfixes       • Component redesign    • Strategic backlog epics
-   • Calculation fixes       • Modals & sheets       • Database migrations
-   • Linters & unit tests    • Touch targets (≥44px) • Multi-step workflows
-   ───────────────────────   ─────────────────────   ──────────────────────────
-   Lead: Principal Eng.      Lead: Designer + Eng.   Lead: PO / PM Orchestrator
-   Zero paperwork            Lightweight chat plan   Formal delivery pipeline
-   Atomic verification       Quick visual QA         Verification Pyramid
+             ┌─────────────────────────────────────────────┐
+                         │        DEVELOPER PROMPT          │
+             └──────────────────────┬──────────────────────┘
+                                    │
+       ┌────────────────────────────┼────────────────────────────┐
+       ▼                            ▼                            ▼
+[ MODE 1: FOCUS ]          [ MODE 2: DUO ]            [ MODE 3: SPRINT ]
+Surgical Fast-Track       Tactical UX + Code          Full Agile Loop
+──────────────────   ─────────────────────────   ──────────────────────
+• Targeted bugfixes     • Component redesign         • Strategic backlog epics
+• Invariant fixes       • Modals & sheets            • Database migrations
+• Linter & unit tests   • Touch targets (≥44px)      • Multi-step workflows
+──────────────────   ─────────────────────────   ──────────────────────
+Lead: Principal Eng.    Designer + Principal Eng.    Lead: PM Orchestrator
+Zero paperwork          Lightweight chat plan        Formal delivery pipeline
+Atomic verification     Quick visual QA              Verification Pyramid
 ```
 
 ---
 
-## 🤖 Sub-Agent Autonomy: The Golden Rule
+## 🔄 The Agile Delivery Flow
 
-> **"Atomic focus on domain logic; parallel hands on exploration and verification."**
+Full specification, with actors and guards: **[`.agents/STATE_MACHINE.md`](.agents/STATE_MACHINE.md)**.
 
-### 🟢 When to Parallelize (Spawn Sub-Agents):
-- **Visual Layout Auditing (`browser_subagent`):** Reserved exclusively for visual layout/CSS issues not deducible statically, complex responsive rendering, or upon explicit user request.
-- **Exploratory Benchmarking:** Research industry standards (Linear, Stripe, Notion) without cluttering the active codebase context.
-- **Accessibility & Performance Auditing:** Automated WCAG 2.1 AA checks and render profilers.
+```
+[ 1. Discovery & PM ] (pm-orchestrator)            refinement gate (R1)
+              │
+              ▼
+[ 2. Research & Design ] (market-researcher + worldclass-product-designer)
+              │
+              ▼
+[ 3. Dev Execution ] (principal-engineer) ────────► status: (pool) → doing → review
+              │
+              ▼
+[ 4. QA Certification ] (rigorous-qa-auditor) ────► status: review → ready   ← formal handover
+              │
+              ▼
+[ 5. Release & Prod ] (PO + Delivery Lead) ───────► status: ready → done     ← after a real deploy
+```
 
-### 🔴 When to Keep Atomic Single-Thread Focus:
-- **Core Domain Logic & State Invariants:** State mutations and critical business invariants demand deterministic, single-threaded execution to prevent race conditions.
-- **Database Schema & Migrations:** Schema foundations and RLS policies must be authored by a single architectural mind.
-- **Global State Management & Parsers:** Context providers, local persistence caches, and backlog parsers require complete end-to-end consistency.
+**There are exactly four statuses: `doing`, `review`, `ready`, `done`.**
+
+- **The backlog is not a status.** An item with no status simply has not entered the flow.
+- **Refinement is a gate (R1), not a state.** An item may only enter `doing` once it has a problem statement, scoped in/out, measurable ACs and a priority.
+- **`ready` is the formal delivery of development.** Only the QA Auditor can move `review → ready`; a developer never self-certifies.
+- **Fundamental invariant:** no item can exist in production that is not `done`.
+
+**Sprints and releases are decoupled.** A release groups available `ready` items by delivered value, with or without an active sprint, historical or current.
+
+**Sprint lifecycle is timeboxed.** If items finish early, the PO expands scope with refined backlog items. The agent **never** closes a sprint or runs a retrospective by deduction — only on explicit textual command.
 
 ---
 
-## 🔄 The Agile Delivery Flow (The 5 Phases)
+## 🧩 The Two Layers
 
-For strategic features and backlog epics (Mode 3), the team orchestrates a rigorous, value-driven feedback loop:
+The framework is deliberately split so that installing it does not impose a stack.
 
-```
-       [ 1. Discovery & PM ] (pm-orchestrator)
-                 │
-                 ▼
-       [ 2. Market Research ] (market-researcher) ◄──────────┐
-                 │                                            │ (UX Adjustments /
-                 ▼                                            │  Edge cases)
-       [ 3. Design & Motion ] (worldclass-product-designer)   │
-                 │                                            │
-                 ▼                                            │
-       [ 4. Dev Execution ] (principal-engineer) ─────────────┘
-                 │ status: doing ➔ review
-                 ▼
-       [ 5. QA Sentinel & Audit ] (rigorous-qa-auditor)
-                 │ status: review ➔ ready (Formal Handover)
-                 ▼
-       [ Release Management & Prod ] (PO + Delivery Lead)
-                 │ status: ready ➔ done (Deployed to Prod)
-                 ▼
-          [ Knowledge Feeder ] ──► [ Feedback to Rules / Skills ]
-```
+### Core — always installed, stack agnostic
 
-1. **PM Orchestrator / PO:** Initializes `docs/sprints/SPRINT-XXX.md` (or backlog task), defines problem scope, target user, and acceptance criteria.
-2. **Market Researcher:** Identifies UX benchmarks, anti-patterns, and domain edge cases from industry leaders.
-3. **World-Class Product Designer:** Defines visual hierarchy, semantic color tokens, 44px touch ergonomics, and micro-interactions.
-4. **Principal Engineer (Dev Execution):** Delivers modular, strictly typed code adhering to domain invariants. Ticks acceptance criteria in real time (`- [x]`). At completion, sets task status to `review`.
-5. **Rigorous QA Auditor (QA Gate):** Audits under the **Verification Pyramid** (`tsc` ➔ headless tests ➔ backlog check ➔ build). Once verified, marks the item as `ready`.
-   - **`ready` is the formal delivery of development:** The item is certified and immediately available for release packaging.
-6. **Release Management (PO + Scrum/Delivery Lead):** Assembles release packages based strictly on **delivered value** from all available `ready` items (historical or current).
-   - **Decoupled Sprints & Releases:** Sprints and releases have no 1:1 coupling. Releases are created based on delivered value, with or without an active sprint.
-   - **Production Deployment (`ready` ➔ `done`):** Upon deploying to production (main cloud), packaged items transition to `done`.
-   - **Fundamental Invariant:** **No item can exist in production that is not in `done`**.
-7. **Sprint Timebox & Continuous Productivity (PO Sovereignty):**
-   - Sprints finish by timebox (fixed duration), regardless of progress. Uncompleted items are replanned.
-   - If items complete early, the PO expands scope with refined backlog items to maintain productivity.
-   - The agent **NEVER** closes a sprint or executes a retrospective autonomously; only upon explicit textual command from the PO.
-8. **Knowledge Feeder:** Feeds lessons learned back into permanent project rules so no mistake is repeated twice.
+| Skill | Role |
+| :--- | :--- |
+| `pm-orchestrator` | Sprint leadership, refinement gate, PO sovereignty |
+| `market-researcher` | Benchmarks and domain edge cases |
+| `worldclass-product-designer` | Visual hierarchy, tokens, touch ergonomics, states |
+| `principal-engineer` | Architecture, invariants, strict typing, performance |
+| `rigorous-qa-auditor` | Verification Pyramid, a11y, certification authority |
+| `code-level-ux-auditor` | 13 static UX signatures + the `audit-ux` CLI |
+
+### Stack packs — installed on demand
+
+| Pack | Skills |
+| :--- | :--- |
+| `react` | `forms-rhf-zod`, `ui-radix-tailwind`, `recharts-reporting` |
+| `mobile` | `mobile-ux-design` |
+| `pwa` | `pwa-assets-audit` |
+
+The core layer is validated to contain **zero** references to any specific product or backend. `npm run validate` enforces this, so the promise cannot silently rot.
 
 ---
 
@@ -155,104 +154,184 @@ For strategic features and backlog epics (Mode 3), the team orchestrates a rigor
 
 ```text
 ├── .agents/
-│   ├── TEAM_PLAYBOOK.md          # Dynamic modes, subagent criteria & 5-phase loop
+│   ├── TEAM_PLAYBOOK.md           # Role matrix, modes, sub-agent criteria
+│   ├── STATE_MACHINE.md           # Single source of truth for statuses & transitions
 │   ├── rules/
-│   │   └── git-workflow.md       # Strict verbal commit permissions & atomic messaging
-│   └── skills/
-│       ├── pm-orchestrator/SKILL.md             # Sprint leadership & DoD
-│       ├── market-researcher/SKILL.md           # Benchmarking & edge cases
-│       ├── worldclass-product-designer/SKILL.md # UI design system & touch ergonomics (≥44px)
-│       ├── principal-engineer/SKILL.md          # Architecture, strict typing & fast-track
-│       ├── rigorous-qa-auditor/SKILL.md         # A11y, mobile viewport & QA signoff
-│       ├── code-level-ux-auditor/SKILL.md       # Static anti-patterns auditor (scroll, keyboards, janks)
-│       ├── mobile-ux-design/SKILL.md            # Touch targets, safe areas & sheets
-│       ├── forms-rhf-zod/SKILL.md               # Controlled inputs, numeric parsing & schemas
-│       ├── pwa-assets-audit/SKILL.md            # Manifest, icons & offline compliance
-│       ├── recharts-reporting/SKILL.md          # Responsive data visualizations & KPIs
-│       └── ui-radix-tailwind/SKILL.md           # Accessible primitive UI components
+│   │   └── git-workflow.md        # Commit governance (canonical copy)
+│   ├── skills/                    # CORE — stack agnostic, always installed
+│   │   ├── pm-orchestrator/SKILL.md
+│   │   ├── market-researcher/SKILL.md
+│   │   ├── worldclass-product-designer/SKILL.md
+│   │   ├── principal-engineer/SKILL.md
+│   │   ├── rigorous-qa-auditor/SKILL.md
+│   │   └── code-level-ux-auditor/SKILL.md
+│   └── stacks/                    # OPTIONAL — installed with --stack <name>
+│       ├── react/{STACK.md, skills/…}
+│       ├── mobile/{STACK.md, skills/…}
+│       └── pwa/{STACK.md, skills/…}
 ├── scripts/
-│   └── audit-ux-code.cjs         # CLI tool: scans src/ for 8 static mobile UX anti-patterns
+│   ├── audit-ux-code.cjs          # Static UX auditor (generic engine)
+│   ├── ux-rules.json              # Rule catalog — single source of truth
+│   ├── sync-playbook.mjs          # Installer / updater
+│   └── validate-repo.mjs          # Self-consistency guardian
+├── tests/                         # Rule engine test suite (node:test)
 ├── docs/
-│   └── sprints/
-│       └── SPRINT_SPEC_TEMPLATE.md # Universal sprint runbook template
-├── AGENTS.md                     # Master project instructions template
-├── LICENSE                       # MIT License
-└── README.md                     # This guide
+│   ├── BACKLOG.md                 # Item pool + refinement flags
+│   └── sprints/SPRINT_SPEC_TEMPLATE.md
+├── .playbook-manifest.json        # What gets installed where
+├── AGENTS.md                      # Master project instructions (template)
+├── package.json
+├── LICENSE                        # MIT
+└── README.md
 ```
 
 ---
 
-## 🚀 Quickstart: Drop into ANY Project (60 Seconds)
+## 🚀 Quickstart
 
-This framework is **100% agnostic** of language, stack, and industry.
-
-### Option A: Project-Level Installation (Recommended)
-
-1. Clone or copy `.agents/`, `docs/`, and `AGENTS.md` into the root of your project:
-   ```bash
-   git clone https://github.com/pablojavierrodriguez/agentic-team-playbook.git temp-playbook
-   cp -r temp-playbook/.agents temp-playbook/docs temp-playbook/AGENTS.md ./
-   rm -rf temp-playbook
-   ```
-2. Open `AGENTS.md` and customize:
-   - **Stack:** Define your tools (e.g. Next.js, FastAPI, Go, Tailwind, PostgreSQL).
-   - **Invariants:** Add any strict domain rules (e.g. data validation, RBAC, access policies).
-3. Start prompting your AI agent naturally. The system will self-select the right mode automatically!
-
-### Option B: Global Installation (Available across all workspaces)
-
-For environments like Antigravity IDE:
-- Copy the skills from `.agents/skills/` into your global config directory:
-  `~/.gemini/config/skills/`
-- Every repository you open will immediately inherit the 5 specialized agent roles.
-
-### Option C: Universal One-Command Sync with `gripm` (Zero-Clone)
-
-If you have Node.js installed, you can initialize or update the latest Playbook standard into **ANY repository** (React, Python, Go, Rust, Swift) without cloning:
+### Option A — Project-level install (recommended)
 
 ```bash
-npx gripm playbook sync
+git clone https://github.com/pablojavierrodriguez/agentic-team-playbook.git temp-playbook
+cp -r temp-playbook/.agents temp-playbook/docs temp-playbook/AGENTS.md ./
+cp temp-playbook/scripts/sync-playbook.mjs temp-playbook/scripts/audit-ux-code.cjs \
+   temp-playbook/scripts/ux-rules.json temp-playbook/scripts/validate-repo.mjs scripts/ 2>/dev/null
+rm -rf temp-playbook
 ```
 
-* **Separation of Layers:** Safely installs and updates `.agents/skills/*` and core rules.
-* **Preservation Guarantee:** Strictly leaves your custom `AGENTS.md` and local backlog intact.
+Then open `AGENTS.md` and fill in the **Tech Stack** and **Language** placeholders.
+
+Add stack packs only if you need them:
+
+```bash
+node scripts/sync-playbook.mjs --stack react --stack mobile
+node scripts/sync-playbook.mjs --list-stacks
+```
+
+### Option B — Zero-clone sync into an existing repo
+
+```bash
+npx @gripm/playbook sync
+```
+
+Or, without `npx`:
+
+```bash
+node scripts/sync-playbook.mjs            # core only
+node scripts/sync-playbook.mjs --stack react
+```
+
+**Safety guarantees of the sync:**
+
+| Guarantee | Behaviour |
+| :--- | :--- |
+| Your `AGENTS.md` is never overwritten | Preserved, always. Created only with `--init-agents`. |
+| Files a human owns are never silently lost | Detected, recorded in `.playbook-lock.json` under `customizations`, and protected on **every** subsequent run until `--force`. |
+| Older canonical files are recognised, not blocked | With no lockfile, the sync asks the upstream history whether the local content is a published revision. If it is, it moves forward silently instead of reporting a false conflict. |
+| Overwrites are reversible | Previous version stored under `.playbook-backups/<ref>/`. |
+| Reproducible | Syncs from a pinned git ref, not a moving branch. |
+| Auditable | `.playbook-lock.json` records a sha256 per file plus the customization list. |
+| Moved files are surfaced | Framework files no longer in the install plan are reported as orphans. Nothing is deleted. |
+
+Useful flags: `--dry-run`, `--tag <ref>`, `--adopt`, `--force`, `--no-history`, `--yes`, `--list-stacks`, `--no-manifest`.
+
+**Migrating from a hand-installed copy.** The first sync has no lockfile, so it cannot tell an untouched v1 skill from an edited one. It resolves that by asking the upstream history. If you would rather not spend those requests, `--no-history` protects anything unrecognised, or `--adopt` keeps every differing file and records it as the baseline you want to keep updating from.
+
+### Option C — Global installation
+
+Copy `.agents/skills/*/SKILL.md` into your assistant's global skills directory (e.g. `~/.gemini/config/skills/`) to make them available in every workspace.
 
 ---
 
-## 🔌 Supercharging Your Team with Official MCP Servers
+## 🧪 The Verification Pyramid (zero-waste testing)
 
-While this framework works standalone with any standard AI coding assistant, pairing it with official **Model Context Protocol (MCP)** servers gives your virtual team specialized real-world superpowers:
+Validate every change in strict order. Each step is cheaper than the next.
 
-| Role | Recommended Official MCP | Superpower Unlocked |
+```
+1. ✅  typecheck         tsc --noEmit / equivalent          → milliseconds
+2. ✅  headless tests    unit + integration, no browser    → seconds
+3. ✅  spec consistency  backlog ↔ sprint spec ↔ code       → seconds
+4. ✅  production build                                      → seconds–minutes
+5. ✅  static UX audit    node scripts/audit-ux-code.cjs --strict
+6. ⚠️  browser           ONLY for static-undeducible CSS/layout, or on explicit request
+```
+
+> [!IMPORTANT]
+> Invoking a browser sub-agent for logic, state, API contracts or persistence is **prohibited** — those are auditable headlessly in milliseconds. The browser is reserved for visual CSS/layout issues that cannot be deduced statically.
+
+---
+
+## 🔍 The static UX auditor
+
+A generic engine plus a declarative rule catalog. No project names, no file names, no hardcoded paths.
+
+```bash
+node scripts/audit-ux-code.cjs                 # human report
+node scripts/audit-ux-code.cjs --strict        # fail on WARNING too
+node scripts/audit-ux-code.cjs --format json   # for CI
+node scripts/audit-ux-code.cjs --list-rules    # inspect the catalog
+node scripts/audit-ux-code.cjs --rule UX-006   # single signature
+```
+
+**13 signatures:** `UX-001` decimal comma blocker · `UX-002` keyboard shortcuts on touch · `UX-003` drag/scroll collision · `UX-004` date localisation leak · `UX-005` autocapitalise trap · `UX-006` fixed bottom UI occlusion · `UX-007` horizontal crowding · `UX-008` micro-Jank · `UX-009` sub-44px target · `UX-010` unnamed icon button · `UX-011` arbitrary font size · `UX-012` no tactile feedback · `UX-013` missing tabular numerals.
+
+**Stack aware by construction.** Rules that depend on a library declare `requires.deps` and skip themselves when the dependency is absent, so a Go or Python project never gets React advice.
+
+**Project configurable** via `.uxaudit.json`:
+
+```json
+{ "src": "src", "disableRules": ["UX-011"], "exclude": ["src/legacy/**"] }
+```
+
+**Inline suppression:** `// ux-audit-ignore` or `// ux-audit-ignore UX-004`.
+
+Adding a signature means editing `scripts/ux-rules.json` **and** documenting it in the `code-level-ux-auditor` skill. `npm run validate` fails if they drift apart.
+
+---
+
+## 🔌 Official MCP servers
+
+| Role | Recommended MCP | Unlocks |
 | :--- | :--- | :--- |
-| **PM Orchestrator & Principal Engineer** | **GitHub MCP** (`@modelcontextprotocol/server-github`) | Read backlog issues, inspect PR diffs, check commit histories, and draft releases directly from the repository. |
-| **Rigorous QA Auditor** | **Chrome DevTools / Puppeteer MCP** (`@modelcontextprotocol/server-puppeteer`) | Autonomous browser navigation, mobile viewport resizing (375px), a11y auditing, and console error detection. |
-| **Principal Engineer** | **Postgres / Database MCP** (`@modelcontextprotocol/server-postgres`) | Live schema inspection, migration verification, and query optimization without leaving the terminal. |
-| **All Roles** | **Filesystem MCP** (`@modelcontextprotocol/server-filesystem`) | High-speed directory traversal and workspace indexing for massive monorepos. |
+| **PM Orchestrator & Principal Engineer** | GitHub MCP | Read backlog issues, inspect PR diffs, draft releases from the repo |
+| **Rigorous QA Auditor** | Chrome DevTools / Puppeteer MCP | Viewport resizing (375px), a11y auditing, console error detection |
+| **Principal Engineer** | Postgres / Database MCP | Live schema inspection, migration verification, query tuning |
+| **All roles** | Filesystem MCP | Fast traversal of large monorepos |
 
 > [!TIP]
-> **Security Best Practice:** Always configure MCP servers in your private local IDE/client settings (e.g. `~/.gemini/config/mcp_config.json`, Claude Desktop config, or Cursor settings). **Never commit personal access tokens, database connection strings, or private keys to your project repositories.**
+> Configure MCP servers in your **private local** client settings. Never commit access tokens, connection strings or private keys.
+
+---
+
+## 🛡️ Quality gates for this repo itself
+
+The framework holds itself to its own standard:
+
+```bash
+npm run validate    # manifest ⇄ disk, rule catalog ⇄ skill docs, core purity, links, frontmatter, status vocabulary
+npm test            # 13 tests over the rule engine
+npm run check:all   # both
+```
 
 ---
 
 ## 🇪🇸 Resumen en Español
 
-**Agentic Team Playbook** es un framework de gobernanza y desarrollo ágil multi-agente para transformar asistentes de IA en un equipo de ingeniería de alto rendimiento:
+**Agentic Team Playbook** es un framework de gobernanza y delivery ágil para assistants de IA:
 
-- **Autonomía sin burocracia:** Clasificación dinámica entre *Foco Quirúrgico* (fixes directos sin papeleo), *Dúo Táctico* (UX + Código) y *Sprint & Backlog Flow* (flujo ágil formal de entrega).
-- **Patrón Role-Swapping (Bajo el Capó):** En lugar de enjambres caóticos que queman tokens y colisionan en Git, un único Host Agent adopta skills modulares bajo demanda (*progressive disclosure*). Subagentes paralelos reservados exclusivamente para validaciones sin estado (browser headless o benchmarking).
-- **Flujo Ágil Canónico (Dev ➔ QA ➔ Release Management ➔ Prod):** Los desarrollos se entregan formalmente en `ready` (el dev implementa en `doing` y pasa a `review`; QA audita y formaliza la entrega en `ready`). Release Management agrupa ítems en `ready` por valor entregado para armar versiones. Al desplegar a producción (main cloud), pasan a `done`.
-- **Invariante Fundamental:** No puede haber un ítem en producción que no esté en `done`.
-- **Desacople Sprint vs. Release:** Los releases se arman exclusivamente por valor entregado con ítems disponibles en `ready`, con o sin sprint activo, con ítems históricos o del sprint en curso.
-- **Sprints Timeboxeados y Soberanía del PO:** El sprint concluye por vencimiento del timebox (duración fija). Si los ítems se entregan antes, el PO amplía el alcance con nuevos ítems del backlog para mantener la productividad continua. Prohibido cerrar sprints o ejecutar retros por deducción propia (solo por orden textual explícita del PO).
-- **Pirámide de Verificación (Cero Desperdicio):** `tsc` ➔ `npm test` ➔ `backlog/spec check` ➔ `build`. Browser subagents reservados exclusivamente para CSS/layouts visuales no deducibles estáticamente.
-- **Sincronización Universal sin Clonar:** Cualquier repositorio puede instalar o actualizar las skills oficiales ejecutando `npx gripm playbook sync`, preservando al 100% tu `AGENTS.md` particular.
-- **Drop-in universal:** Funciona en cualquier tecnología (React, Vue, Node, Python, Go, Swift) copiando la carpeta `.agents/` a tu repositorio.
-- **Potenciación con MCP Oficiales:** Compatible con servidores MCP (GitHub, Puppeteer/DevTools, PostgreSQL) configurados en tu entorno local.
+- **Autonomía sin burocracia:** clasificación dinámica entre *Foco Quirúrgico* (fixes directos), *Dúo Táctico* (UX + código) y *Sprint & Backlog Flow* (loop formal).
+- **Patrón Role-Swapping:** en lugar de enjambres que queman tokens y colisionan en Git, un único Host Agent adopna skills modulares bajo demanda. Subagentes paralelos solo para verificaciones sin estado.
+- **Cuatro status canónicos:** `doing → review → ready → done`. **El backlog no es un status** (un ítem sin status simplemente aún no entró al flujo) y **el refinamiento es un gate (R1), no un estado**.
+- **`ready` es la entrega formal del desarrollo.** Solo el QA Auditor mueve `review → ready`; un developer nunca se autocertifica. `ready` es inmutable: un fix post-QA invalida la certificación.
+- **Invariante fundamental:** ningún ítem puede estar en producción sin estar en `done`.
+- **Desacople Sprint ↔ Release:** los releases se arman por valor entregado con ítems en `ready`, con o sin sprint activo.
+- **Pirámide de Verificación:** typecheck → tests → consistencia spec → build → auditoría UX estática. Browser subagents prohibidos para lógica, estado, API o persistencia.
+- **Dos capas:** *core* agnóstico de stack (siempre instalado) + *stack packs* opcionales (`react`, `mobile`, `pwa`). El core se valida como libre de referencias a producto o backend.
+- **Sync no destructivo:** `AGENTS.md` nunca se sobrescribe; las customizaciones locales se detectan por hash, se reportan como `[Protected]` y exigen `--force`; todo overwrite queda respaldado.
 
 ---
 
 ## 📜 License
 
-Distributed under the [MIT License](LICENSE). Free for personal and commercial use.
+MIT. Free for personal and commercial use.
 Authored by [Pablo Javier Rodríguez](https://github.com/pablojavierrodriguez).

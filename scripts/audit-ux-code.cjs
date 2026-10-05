@@ -1,267 +1,504 @@
 #!/usr/bin/env node
 
+'use strict';
+
 /**
  * scripts/audit-ux-code.cjs
- * Static Code-Level UX & Mobile Anti-Patterns Auditor (Closed-Loop UX Engine)
  *
- * Escanea archivos en src/ para detectar firmas estáticas de errores de UX móvil,
- * conflictos de gestos, touch targets deficientes (< 44px), clases arbitrarias y accesibilidad.
+ * Generic static UX / ergonomics auditor.
+ *
+ * This file is only an ENGINE. All detection knowledge lives in
+ * scripts/ux-rules.json, which is the single source of truth shared with
+ * .agents/skills/code-level-ux-auditor/SKILL.md.
+ *
+ * Design constraints:
+ *  - Stack agnostic. Rules that depend on a library (date-fns, framer-motion)
+ *    declare `requires.deps` and are skipped when the dependency is absent.
+ *  - Project agnostic. No file names, no project names, no hardcoded paths.
+ *  - Never crashes on a missing source directory or a non-JS project.
+ *
+ * Usage:
+ *   node scripts/audit-ux-code.cjs [options]
+ *
+ * Options:
+ *   --src <dir>        Source directory to scan (default: auto-detect)
+ *   --config <file>    Config file (default: .uxaudit.json in project root)
+ *   --strict           Exit 1 on WARNING as well as ERROR
+ *   --format <fmt>     human (default) | json
+ *   --list-rules       Print the rule catalog and exit
+ *   --rule <ID>        Only run this rule (repeatable)
+ *   --quiet            Only print the summary
+ *   --help             Print usage
+ *
+ * Exit codes:
+ *   0  no blocking findings (or nothing to scan)
+ *   1  blocking findings present
+ *   2  fatal error (bad config, unreadable rules file)
  */
 
 const fs = require('fs');
 const path = require('path');
 
-const ROOT = path.resolve(__dirname, '..');
-const SRC = path.join(ROOT, 'src');
+// ROOT is the project being audited. When the script is synced into a target
+// repo it lands in <target>/scripts/, so __dirname/.. is already correct.
+// AUDIT_UX_ROOT allows pointing the auditor at another project explicitly.
+const ROOT = process.env.AUDIT_UX_ROOT
+  ? path.resolve(process.env.AUDIT_UX_ROOT)
+  : path.resolve(__dirname, '..');
+const RULES_PATH = path.join(__dirname, 'ux-rules.json');
+const CONFIG_NAME = '.uxaudit.json';
 
-const isStrict = process.argv.includes('--strict');
-const findings = [];
+const SEVERITY_ORDER = ['ERROR', 'WARNING', 'INFO'];
+const SCAN_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'];
+const SKIP_DIRS = new Set([
+  'node_modules', '.git', 'dist', 'build', 'out', 'coverage', '.next',
+  '.turbo', '.svelte-kit', '.cache', 'vendor', '__tests__', '__mocks__',
+  '__snapshots__', 'storybook', 'stories', 'e2e', 'cypress',
+]);
+const SKIP_FILE_PATTERN = /(\.test\.|\.spec\.|\.stories\.|\.d\.ts$|^\.env)/;
 
-function walk(dir) {
-  const files = fs.readdirSync(dir);
-  for (const file of files) {
-    const fullPath = path.join(dir, file);
-    const stat = fs.statSync(fullPath);
-    if (stat.isDirectory()) {
-      if (file !== 'test' && file !== 'node_modules' && file !== '__mocks__' && file !== 'ui') {
-        walk(fullPath);
-      }
-    } else if (file.endsWith('.tsx') || file.endsWith('.ts')) {
-      auditFile(fullPath);
+const OUTPUT_FORMAT = process.argv.includes('--format')
+  ? process.argv[process.argv.indexOf('--format') + 1]
+  : 'human';
+
+function fatal(message) {
+  if (OUTPUT_FORMAT === 'json') {
+    console.log(JSON.stringify({ error: message, findings: [] }, null, 2));
+  } else {
+    console.error(`\n❌ audit-ux: ${message}\n`);
+  }
+  process.exit(2);
+}
+
+function parseArgs(argv) {
+  const opts = {
+    src: null,
+    config: null,
+    strict: false,
+    format: 'human',
+    listRules: false,
+    rules: [],
+    quiet: false,
+    help: false,
+  };
+
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    switch (arg) {
+      case '--src': opts.src = argv[++i]; break;
+      case '--config': opts.config = argv[++i]; break;
+      case '--strict': opts.strict = true; break;
+      case '--format': opts.format = argv[++i]; break;
+      case '--list-rules': opts.listRules = true; break;
+      case '--rule': opts.rules.push(argv[++i]); break;
+      case '--quiet': opts.quiet = true; break;
+      case '--help':
+      case '-h': opts.help = true; break;
+      default:
+        if (arg.startsWith('--')) fatal(`Unknown option: ${arg}`);
     }
+  }
+
+  if (!['human', 'json'].includes(opts.format)) {
+    fatal(`Unknown --format "${opts.format}". Expected "human" or "json".`);
+  }
+
+  return opts;
+}
+
+function loadRules() {
+  let raw;
+  try {
+    raw = fs.readFileSync(RULES_PATH, 'utf8');
+  } catch {
+    fatal(`Cannot read the rule catalog at ${RULES_PATH}`);
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    fatal(`Rule catalog is not valid JSON: ${err.message}`);
+  }
+
+  if (!Array.isArray(parsed.rules) || parsed.rules.length === 0) {
+    fatal('Rule catalog contains no rules.');
+  }
+
+  const seen = new Set();
+  for (const rule of parsed.rules) {
+    for (const field of ['id', 'title', 'severity', 'message']) {
+      if (!rule[field]) fatal(`Rule is missing required field "${field}": ${JSON.stringify(rule)}`);
+    }
+    if (!SEVERITY_ORDER.includes(rule.severity)) {
+      fatal(`Rule ${rule.id} has invalid severity "${rule.severity}".`);
+    }
+    if (seen.has(rule.id)) fatal(`Duplicate rule id: ${rule.id}`);
+    seen.add(rule.id);
+  }
+
+  return { version: parsed.version || 1, rules: parsed.rules };
+}
+
+function loadConfig(opts) {
+  const configPath = opts.config
+    ? path.resolve(ROOT, opts.config)
+    : path.join(ROOT, CONFIG_NAME);
+
+  if (!fs.existsSync(configPath)) return { configPath, config: {} };
+
+  try {
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    return { configPath, config: config || {} };
+  } catch (err) {
+    fatal(`Config file ${configPath} is not valid JSON: ${err.message}`);
   }
 }
 
-function auditFile(filePath) {
-  const content = fs.readFileSync(filePath, 'utf8');
-  const relPath = path.relative(ROOT, filePath);
-  const lines = content.split('\n');
+function detectSourceDir(explicit, config) {
+  if (explicit) {
+    const resolved = path.resolve(ROOT, explicit);
+    if (!fs.existsSync(resolved)) fatal(`--src directory does not exist: ${resolved}`);
+    return resolved;
+  }
+
+  if (config.src) {
+    const resolved = path.resolve(ROOT, config.src);
+    if (!fs.existsSync(resolved)) fatal(`Config "src" directory does not exist: ${resolved}`);
+    return resolved;
+  }
+
+  for (const candidate of ['src', 'app', 'frontend', 'web', 'client']) {
+    const resolved = path.join(ROOT, candidate);
+    if (fs.existsSync(resolved) && fs.statSync(resolved).isDirectory()) return resolved;
+  }
+
+  return null;
+}
+
+function loadDependencies() {
+  const pkgPath = path.join(ROOT, 'package.json');
+  if (!fs.existsSync(pkgPath)) return new Set();
+
+  try {
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    return new Set([
+      ...Object.keys(pkg.dependencies || {}),
+      ...Object.keys(pkg.devDependencies || {}),
+      ...Object.keys(pkg.peerDependencies || {}),
+    ]);
+  } catch {
+    return new Set();
+  }
+}
+
+function collectFiles(dir, out = [], unreadable = []) {
+  let entries;
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch (err) {
+    unreadable.push({ dir, error: err.message });
+    return out;
+  }
+
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (SKIP_DIRS.has(entry.name)) continue;
+      collectFiles(full, out, unreadable);
+    } else if (SCAN_EXTENSIONS.includes(path.extname(entry.name))) {
+      if (SKIP_FILE_PATTERN.test(entry.name)) continue;
+      out.push(full);
+    }
+  }
+
+  return out;
+}
+
+/** Returns '*' for a blanket suppression or the list of suppressed rule ids. */
+function readSuppression(line) {
+  const match = line.match(/ux-audit-ignore\s*([A-Z]+-\d+)?/);
+  if (!match) return null;
+  return match[1] || '*';
+}
+
+function buildWindow(lines, index, radius) {
+  const start = Math.max(0, index - radius);
+  const end = Math.min(lines.length, index + radius + 1);
+  return lines.slice(start, end).join('\n');
+}
+
+const TAG_OPEN = /<[A-Za-z][\w.]*/g;
+
+/**
+ * Groups lines into logical units.
+ *
+ * A JSX element whose attributes span several lines must be matched as ONE
+ * unit, otherwise an escape hatch like inputMode="decimal" sitting on the next
+ * line is invisible and the rule reports a false positive. That formatting is
+ * what every formatter produces, so line-by-line matching is not enough.
+ *
+ * A unit keeps growing while it holds more JSX tag openings than tag closes.
+ * Comparison and arrow operators contribute no tag opening, so ordinary
+ * statements always close their own unit and are never over-merged.
+ */
+function buildUnits(lines) {
+  const units = [];
+  let current = null;
 
   lines.forEach((line, index) => {
-    const lineNum = index + 1;
-    if (line.includes('// ux-audit-ignore')) return;
-
-    // 1. [UX-001] Bloqueo de Coma Decimal Regional (type="number")
-    if (
-      (line.includes('type="number"') || line.includes("type='number'")) &&
-      !filePath.includes('otp')
-    ) {
-      findings.push({
-        file: relPath,
-        line: lineNum,
-        severity: 'WARNING',
-        code: 'UX-001',
-        message: 'Uso de type="number" en input. En mobile rompe comas decimales regionales (regional-locale). Usar inputMode="decimal" y parseThousandsInput.',
-      });
+    if (!current) {
+      current = { startLine: index + 1, parts: [line] };
+    } else {
+      current.parts.push(line);
     }
 
-    // 2. [UX-002] Shortcuts de teclado físico sin ocultar en mobile (kbd o ⌘)
-    if (
-      (line.includes('<kbd') || line.includes('⌘') || line.includes('Ctrl+')) &&
-      !line.includes('hidden') &&
-      !line.includes('useIsMobile') &&
-      !filePath.includes('KeyboardShortcutsModal') &&
-      !filePath.includes('DesktopSidebar') &&
-      !filePath.includes('i18n')
-    ) {
-      findings.push({
-        file: relPath,
-        line: lineNum,
-        severity: 'INFO',
-        code: 'UX-002',
-        message: 'Atajo de teclado físico (⌘ / <kbd>) visible en mobile sin clase "hidden sm:inline-flex".',
-      });
-    }
+    const text = current.parts.join('\n');
+    const opens = (text.match(TAG_OPEN) || []).length;
+    const closes = (text.match(/>/g) || []).length;
 
-    // 3. [UX-003] Colisión Drag/Scroll sin compensación
-    if (line.includes('<Reorder.Group')) {
-      findings.push({
-        file: relPath,
-        line: lineNum,
-        severity: 'WARNING',
-        code: 'UX-003',
-        message: 'Uso de <Reorder.Group>. Verificar que no esté dentro de un scroll container (overflow-y-auto) o reemplazar por Pointer Events a 120 FPS.',
-      });
-    }
-
-    // 4. [UX-004] Fuga de Localización Temporal (date-fns format sin locale)
-    if (
-      line.includes('format(') &&
-      content.includes("from 'date-fns'") &&
-      !line.includes('locale') &&
-      !line.includes('activeLocale') &&
-      (line.includes('"MMMM"') || line.includes('"MMM"') || line.includes("'MMMM'") || line.includes("'MMM'") || line.includes('"EEEE"') || line.includes("'EEEE'"))
-    ) {
-      findings.push({
-        file: relPath,
-        line: lineNum,
-        severity: 'WARNING',
-        code: 'UX-004',
-        message: 'Llamada a format() de date-fns con nombres de mes/día sin locale en español ({ locale: activeLocale }).',
-      });
-    }
-
-    // 5. [UX-005] Trampa de Autocorrección y Mayúsculas en Login
-    if (
-      (line.includes('type="email"') || line.includes("type='email'")) &&
-      !line.includes('autoCapitalize="none"') &&
-      !content.includes('autoCapitalize="none"')
-    ) {
-      findings.push({
-        file: relPath,
-        line: lineNum,
-        severity: 'WARNING',
-        code: 'UX-005',
-        message: 'Input de email sin autoCapitalize="none" / autoCorrect="off". Provoca errores de login en teclados móviles.',
-      });
-    }
-
-    // 6. [UX-006] Touch Target Diminuto (< 36px) en Botones de Acción
-    if (
-      (line.includes('<button') || line.includes('<motion.button')) &&
-      (line.includes('h-6 ') || line.includes('h-7 ') || line.includes('h-8 ') || line.includes('w-6 ') || line.includes('w-7 ') || line.includes('w-8 ')) &&
-      !line.includes('p-') &&
-      !line.includes('min-h-[44px]') &&
-      !line.includes('min-w-[44px]') &&
-      !line.includes('hit-slop')
-    ) {
-      findings.push({
-        file: relPath,
-        line: lineNum,
-        severity: 'WARNING',
-        code: 'UX-006',
-        message: 'Botón con altura o anchura ≤ 32px (h-6/h-7/h-8) sin padding/hit-slop compensatorio. Toque difícil en pantallas táctiles (mínimo 44×44px efectivo).',
-      });
-    }
-
-    // 7. [UX-007] Clases Arbitrarias de Texto fuera de la Escala Tipográfica Canónica
-    const arbitraryTextMatch = line.match(/\btext-\[(?:8|9|10|11|13|13\.5|15)px\]/);
-    if (arbitraryTextMatch && !filePath.includes('Landing.tsx') && !filePath.includes('ReportsPage.tsx')) {
-      findings.push({
-        file: relPath,
-        line: lineNum,
-        severity: 'INFO',
-        code: 'UX-007',
-        message: `Uso de tamaño de texto arbitrario "${arbitraryTextMatch[0]}". Ceñirse a la escala canónica de Tailwind (text-xs, text-sm, text-base).`,
-      });
-    }
-
-    // 8. [UX-008] Botón con Icono sin Accesibilidad (aria-label o title)
-    if (
-      (line.includes('<button') || line.includes('<motion.button')) &&
-      !line.includes('aria-label=') &&
-      !line.includes('title=') &&
-      (line.includes('rounded-full') || line.includes('rounded-xl') || line.includes('rounded-lg')) &&
-      (line.includes('w-8') || line.includes('w-9') || line.includes('w-10') || line.includes('w-11') || line.includes('w-12'))
-    ) {
-      const nextLines = lines.slice(index, index + 4).join(' ');
-      if (nextLines.includes('/>') && !nextLines.includes('{') && (nextLines.includes('Icon') || nextLines.includes('Plus') || nextLines.includes('Trash') || nextLines.includes('Pencil') || nextLines.includes('Search') || nextLines.includes('Settings'))) {
-        findings.push({
-          file: relPath,
-          line: lineNum,
-          severity: 'WARNING',
-          code: 'UX-008',
-          message: 'Botón de icono interactivo sin atributo aria-label ni title accesible para lectores de pantalla y screen readers.',
-        });
-      }
-    }
-
-    // 9. [UX-009] Doble Padding Inferior Redundante (pb-28 o pb-32 anidado)
-    if (
-      line.includes('pb-28') &&
-      (filePath.includes('TransactionList.tsx') || filePath.includes('AccountManager.tsx'))
-    ) {
-      findings.push({
-        file: relPath,
-        line: lineNum,
-        severity: 'WARNING',
-        code: 'UX-009',
-        message: 'Padding inferior redundante (pb-28). El layout contenedor (Index.tsx) ya aplica pb-32, provocando un vacío excesivo al scrollear.',
-      });
-    }
-
-    // 10. [UX-010] Elemento Clickeable sin Feedback Visual Táctil (active:scale)
-    if (
-      line.includes('cursor-pointer') &&
-      line.includes('onClick=') &&
-      !line.includes('active:scale-') &&
-      !line.includes('active:bg-') &&
-      !line.includes('hover:bg-') &&
-      !line.includes('motion.')
-    ) {
-      findings.push({
-        file: relPath,
-        line: lineNum,
-        severity: 'INFO',
-        code: 'UX-010',
-        message: 'Elemento con onClick interactivo sin feedback táctil ni transición de estado (agregar active:scale-[0.98] o active:bg-secondary).',
-      });
-    }
-
-    // 11. [UX-011] Monedas o Saldos sin Monospace Tabular (font-mono-data)
-    if (
-      line.includes('formatAmount(') &&
-      !line.includes('font-mono-data') &&
-      !lines.slice(Math.max(0, index - 2), index + 3).some(l => l.includes('font-mono-data') || l.includes('tabular-nums'))
-    ) {
-      findings.push({
-        file: relPath,
-        line: lineNum,
-        severity: 'INFO',
-        code: 'UX-011',
-        message: 'Monto formateado con formatAmount sin clase "font-mono-data" o "tabular-nums". Puede provocar micro-saltos horizontales de texto.',
-      });
-    }
-
-    // 12. [UX-012] Flex Horizontal de Tarjetas sin min-w-0 / truncate
-    if (
-      line.includes('flex items-center justify-between') &&
-      !line.includes('min-w-0') &&
-      (filePath.includes('Transaction') || filePath.includes('Account') || filePath.includes('Card'))
-    ) {
-      findings.push({
-        file: relPath,
-        line: lineNum,
-        severity: 'INFO',
-        code: 'UX-012',
-        message: 'Contenedor flex de tarjeta móvil sin "min-w-0" en sus columnas hijas. Riesgo de desborde y empuje horizontal en 375px.',
-      });
+    if (opens <= closes) {
+      current.text = text;
+      units.push(current);
+      current = null;
     }
   });
+
+  if (current) {
+    current.text = current.parts.join('\n');
+    units.push(current);
+  }
+
+  return units;
 }
 
-console.log('\n=====================================================');
-console.log('🔍 YourApp: CLOSED-LOOP STATIC UX & ERGONOMICS AUDITOR');
-console.log('=====================================================\n');
+function ruleAppliesToProject(rule, relPath, deps) {
+  const check = rule.check || {};
 
-walk(SRC);
+  if ((check.unlessFile || []).some((token) => relPath.includes(token))) return false;
 
-const errors = findings.filter(f => f.severity === 'ERROR');
-const warnings = findings.filter(f => f.severity === 'WARNING');
-const infos = findings.filter(f => f.severity === 'INFO');
+  const required = rule.requires && rule.requires.deps;
+  if (required && required.length && !required.some((dep) => deps.has(dep))) return false;
 
-if (findings.length === 0) {
-  console.log('✅ CERO anti-patrones estáticos de UX detectados en src/.');
-  console.log('🎉 El código cumple con las directivas de ergonomía táctil y robustez móvil.\n');
-  process.exit(0);
-} else {
-  console.log(`Se encontraron ${findings.length} observaciones de UX en el código:\n`);
-  findings.forEach(f => {
-    const icon = f.severity === 'ERROR' ? '❌' : f.severity === 'WARNING' ? '⚠️' : 'ℹ️';
-    console.log(`${icon} [${f.code}] ${f.file}:${f.line}`);
-    console.log(`   ${f.message}\n`);
-  });
+  return true;
+}
+
+function lineMatches(rule, unit, lines, unitIndex, content) {
+  const check = rule.check || {};
+  const text = unit.text;
+
+  const anyIn = (list) => list.some((token) => text.includes(token));
+  const anyContent = (list) => list.some((token) => content.includes(token));
+
+  if (!(check.line || []).some((token) => text.includes(token))) return false;
+  if ((check.alsoLine || []).length && !anyIn(check.alsoLine)) return false;
+  if (anyIn(check.unlessLine || [])) return false;
+  if (anyContent(check.unlessContent || [])) return false;
+  if ((check.needsContent || []).length && !anyContent(check.needsContent)) return false;
+
+  const radius = typeof check.window === 'number' ? check.window : 6;
+  if ((check.nearby || []).length || (check.unlessNearby || []).length) {
+    const window = buildWindow(lines, unit.startLine - 1, radius);
+    if ((check.nearby || []).length && !(check.nearby || []).some((t) => window.includes(t))) return false;
+    if ((check.unlessNearby || []).some((t) => window.includes(t))) return false;
+  }
+
+  return true;
+}
+
+function auditFile(filePath, rules, deps, disabledRules) {
+  const findings = [];
+  const relPath = path.relative(ROOT, filePath);
+
+  let content;
+  try {
+    content = fs.readFileSync(filePath, 'utf8');
+  } catch (err) {
+    return { findings, error: err.message };
+  }
+
+  const lines = content.split('\n');
+  const units = buildUnits(lines);
+
+  for (const rule of rules) {
+    if (disabledRules.has(rule.id)) continue;
+    if (!ruleAppliesToProject(rule, relPath, deps)) continue;
+
+    for (let i = 0; i < units.length; i += 1) {
+      const unit = units[i];
+      const suppression = unit.parts.map(readSuppression).find(Boolean);
+      if (suppression === '*') continue;
+      if (suppression === rule.id) continue;
+
+      if (!lineMatches(rule, unit, lines, i, content)) continue;
+
+      findings.push({
+        rule: rule.id,
+        title: rule.title,
+        severity: rule.severity,
+        file: relPath,
+        line: unit.startLine,
+        message: rule.message,
+        fix: rule.fix || null,
+        snippet: unit.parts[0].trim().slice(0, 160),
+      });
+      break; // one finding per rule per file keeps the report actionable
+    }
+  }
+
+  return { findings, error: null };
+}
+
+function printHuman(report, opts) {
+  const { findings, summary, srcDir, rulesVersion } = report;
+
+  if (!opts.quiet) {
+    console.log('');
+    console.log('=====================================================');
+    console.log('Static UX & Mobile Ergonomics Auditor');
+    console.log(`rules v${rulesVersion}  ·  ${summary.total} finding(s)  ·  ${srcDir}`);
+    console.log('=====================================================');
+    console.log('');
+  }
+
+  if (findings.length === 0) {
+    if (!opts.quiet) {
+      console.log('✅ No static UX anti-patterns detected.');
+      console.log('');
+    }
+    return;
+  }
+
+  const icons = { ERROR: '❌', WARNING: '⚠️ ', INFO: 'ℹ️ ' };
+
+  for (const finding of findings) {
+    console.log(`${icons[finding.severity]} [${finding.rule}] ${finding.file}:${finding.line}`);
+    console.log(`   ${finding.message}`);
+    if (finding.fix) console.log(`   fix: ${finding.fix}`);
+    console.log('');
+  }
 
   console.log('=====================================================');
-  console.log(`Resumen: ${errors.length} errores, ${warnings.length} advertencias, ${infos.length} sugerencias.`);
-  console.log('=====================================================\n');
+  console.log(
+    `Summary: ${summary.ERROR} error(s), ${summary.WARNING} warning(s), ${summary.INFO} suggestion(s).`,
+  );
+  console.log('=====================================================');
+  console.log('');
+}
 
-  if (isStrict && (errors.length > 0 || warnings.length > 0)) {
-    console.error('⛔ Modo estricto activado: Fallo por advertencias/errores de UX.');
-    process.exit(1);
-  }
+function printJson(report) {
+  console.log(JSON.stringify({
+    rulesVersion: report.rulesVersion,
+    src: report.srcDir,
+    summary: report.summary,
+    findings: report.findings,
+  }, null, 2));
+}
 
-  if (errors.length > 0) {
-    process.exit(1);
+function printRuleCatalog(catalog) {
+  console.log('');
+  console.log(`Rule catalog v${catalog.version} — ${catalog.rules.length} signatures`);
+  console.log('');
+  for (const rule of catalog.rules) {
+    const gated = rule.requires && rule.requires.deps
+      ? ` [requires: ${rule.requires.deps.join(' | ')}]`
+      : ' [stack agnostic]';
+    console.log(`${rule.severity.padEnd(7)} ${rule.id}  ${rule.title}${gated}`);
+    console.log(`        signature: ${rule.signature}`);
+    console.log(`        fix: ${rule.fix}`);
+    console.log('');
   }
 }
+
+function printUsage() {
+  console.log(fs.readFileSync(__filename, 'utf8').split('*/')[0].replace(/^\/\*\*?/, '').replace(/^ \* ?/gm, ''));
+}
+
+function main() {
+  const opts = parseArgs(process.argv.slice(2));
+
+  if (opts.help) {
+    printUsage();
+    return;
+  }
+
+  const catalog = loadRules();
+
+  if (opts.listRules) {
+    printRuleCatalog(catalog);
+    return;
+  }
+
+  const { config } = loadConfig(opts);
+
+  const unknown = opts.rules.filter((id) => !catalog.rules.some((rule) => rule.id === id));
+  if (unknown.length) fatal(`Unknown rule id requested with --rule: ${unknown.join(', ')}`);
+
+  const disabledRules = new Set(config.disableRules || []);
+
+  const activeRules = opts.rules.length
+    ? catalog.rules.filter((rule) => opts.rules.includes(rule.id))
+    : catalog.rules;
+
+  const srcDir = detectSourceDir(opts.src, config);
+
+  if (!srcDir) {
+    if (opts.format === 'json') {
+      printJson({ rulesVersion: catalog.version, srcDir: null, summary: { total: 0, ERROR: 0, WARNING: 0, INFO: 0 }, findings: [] });
+    } else if (!opts.quiet) {
+      console.log('');
+      console.log('ℹ️  No JavaScript/TypeScript source directory found (looked for src, app, frontend, web, client).');
+      console.log('   Nothing to audit. Pass --src <dir> to point the auditor somewhere else.');
+      console.log('');
+    }
+    return;
+  }
+
+  const deps = loadDependencies();
+  const files = [];
+  const unreadable = [];
+  collectFiles(srcDir, files, unreadable);
+
+  const findings = [];
+  for (const file of files) {
+    const result = auditFile(file, activeRules, deps, disabledRules);
+    findings.push(...result.findings);
+  }
+
+  const severityRank = { ERROR: 0, WARNING: 1, INFO: 2 };
+  findings.sort((a, b) => (
+    severityRank[a.severity] - severityRank[b.severity]
+    || a.file.localeCompare(b.file)
+    || a.line - b.line
+    || a.rule.localeCompare(b.rule)
+  ));
+
+  const summary = { total: findings.length, ERROR: 0, WARNING: 0, INFO: 0 };
+  for (const finding of findings) summary[finding.severity] += 1;
+
+  const report = {
+    rulesVersion: catalog.version,
+    srcDir: path.relative(ROOT, srcDir) || '.',
+    summary,
+    findings,
+  };
+
+  if (opts.format === 'json') printJson(report);
+  else printHuman(report, opts);
+
+  if (opts.format !== 'json' && !opts.quiet && unreadable.length) {
+    console.log(`⚠️  ${unreadable.length} directory(ies) could not be read and were skipped.`);
+    console.log('');
+  }
+
+  const blocked = summary.ERROR > 0 || (opts.strict && summary.WARNING > 0);
+  if (blocked) {
+    if (opts.format === 'json') process.exitCode = 1;
+    else {
+      console.error(`⛔ audit-ux failed: ${summary.ERROR} error(s)${opts.strict ? `, ${summary.WARNING} warning(s)` : ''}.`);
+      process.exitCode = 1;
+    }
+  }
+}
+
+main();

@@ -1,0 +1,57 @@
+{
+  "$comment": "Canonical install manifest. Consumed by scripts/sync-playbook.mjs. Adding a file here makes it installable everywhere on the next sync, with no script change.",
+  "version": "2.0.0",
+  "core": [
+    ".agents/TEAM_PLAYBOOK.md",
+    ".agents/STATE_MACHINE.md",
+    ".agents/rules/git-workflow.md",
+    ".agents/skills/pm-orchestrator/SKILL.md",
+    ".agents/skills/market-researcher/SKILL.md",
+    ".agents/skills/worldclass-product-designer/SKILL.md",
+    ".agents/skills/principal-engineer/SKILL.md",
+    ".agents/skills/rigorous-qa-auditor/SKILL.md",
+    ".agents/skills/code-level-ux-auditor/SKILL.md",
+    "scripts/audit-ux-code.cjs",
+    "scripts/ux-rules.json",
+    "docs/sprints/SPRINT_SPEC_TEMPLATE.md"
+  ],
+  "coreSkills": [
+    "pm-orchestrator",
+    "market-researcher",
+    "worldclass-product-designer",
+    "principal-engineer",
+    "rigorous-qa-auditor",
+    "code-level-ux-auditor"
+  ],
+  "stacks": {
+    "react": {
+      "description": "React: forms with React Hook Form + Zod, Radix + Tailwind primitives, Recharts reporting.",
+      "files": [
+        ".agents/stacks/react/STACK.md",
+        ".agents/stacks/react/skills/forms-rhf-zod/SKILL.md",
+        ".agents/stacks/react/skills/ui-radix-tailwind/SKILL.md",
+        ".agents/stacks/react/skills/recharts-reporting/SKILL.md"
+      ]
+    },
+    "mobile": {
+      "description": "Mobile-first responsive UX, sheets, virtual keyboard, safe areas, Capacitor native integration.",
+      "files": [
+        ".agents/stacks/mobile/STACK.md",
+        ".agents/stacks/mobile/skills/mobile-ux-design/SKILL.md"
+      ]
+    },
+    "pwa": {
+      "description": "Progressive Web App: manifest, icons, service worker and install configuration consistency.",
+      "files": [
+        ".agents/stacks/pwa/STACK.md",
+        ".agents/stacks/pwa/skills/pwa-assets-audit/SKILL.md"
+      ]
+    }
+  },
+  "preserved": [
+    "AGENTS.md",
+    "docs/BACKLOG.md",
+    ".uxaudit.json",
+    ".playbook-lock.json"
+  ]
+}

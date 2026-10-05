@@ -1,16 +1,23 @@
 {
-  "name": "agentic-team-playbook",
-  "version": "1.0.0",
+  "name": "@gripm/playbook",
+  "version": "2.0.0",
   "description": "Autonomous multi-agent agile framework for modern software development with dynamic modes, decoupled releases, and sub-agent orchestration.",
   "type": "module",
   "main": "./scripts/sync-playbook.mjs",
   "bin": {
+    "playbook": "./scripts/sync-playbook.mjs",
     "agentic-team-playbook": "./scripts/sync-playbook.mjs"
   },
   "scripts": {
     "sync": "node scripts/sync-playbook.mjs",
     "playbook:sync": "node scripts/sync-playbook.mjs",
-    "audit:ux": "node scripts/audit-ux-code.cjs"
+    "stacks": "node scripts/sync-playbook.mjs --list-stacks",
+    "audit:ux": "node scripts/audit-ux-code.cjs",
+    "audit:ux:strict": "node scripts/audit-ux-code.cjs --strict",
+    "rules": "node scripts/audit-ux-code.cjs --list-rules",
+    "validate": "node scripts/validate-repo.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "check:all": "npm run validate && npm test"
   },
   "keywords": [
     "agentic",
@@ -41,10 +48,16 @@
   },
   "files": [
     ".agents",
+    ".playbook-manifest.json",
     "docs",
     "scripts",
     "AGENTS.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
     "LICENSE",
     "README.md"
-  ]
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
 }
