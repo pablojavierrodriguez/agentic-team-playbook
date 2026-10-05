@@ -629,6 +629,7 @@ function parseArgs(argv) {
     const arg = argv[i];
     const next = () => argv[++i];
     switch (arg) {
+      case 'sync': break;
       case '--repo': case '-r': opts.repo = path.resolve(next()); break;
       case '--tag': case '-t': opts.tag = next(); break;
       case '--branch': case '-b': opts.tag = next(); break;

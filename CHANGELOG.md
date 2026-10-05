@@ -70,10 +70,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Duplicated git policy between `AGENTS.md` and `.agents/rules/git-workflow.md`. `AGENTS.md` now links to the rule file; the duplicate is gone.
 - The README claimed the sync preserved local files; it only ever preserved `AGENTS.md`.
 
-### Known issues
+### Packaging
 
-- `npx gripm playbook sync` is documented but `gripm` is not yet published to npm. The equivalent `node scripts/sync-playbook.mjs` command works today.
-- `agentic-team-playbook` itself is not published to npm yet, so the `agentic-team-playbook` bin is not yet invocable via `npx`.
+- Configured for npm publication under `@gripm/playbook` supporting `npx @gripm/playbook sync`.
 
 [Unreleased]: https://github.com/pablojavierrodriguez/agentic-team-playbook/compare/v2.0.0...HEAD
 [2.0.0]: https://github.com/pablojavierrodriguez/agentic-team-playbook/releases/tag/v2.0.0

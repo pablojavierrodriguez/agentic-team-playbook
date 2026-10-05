@@ -211,10 +211,10 @@ node scripts/sync-playbook.mjs --list-stacks
 ### Option B — Zero-clone sync into an existing repo
 
 ```bash
-npx gripm playbook sync
+npx @gripm/playbook sync
 ```
 
-Or, without `gripm`:
+Or, without `npx`:
 
 ```bash
 node scripts/sync-playbook.mjs            # core only
