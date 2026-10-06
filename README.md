@@ -319,7 +319,7 @@ The framework holds itself to its own standard:
 
 ```bash
 npm run validate    # manifest ⇄ disk, rule catalog ⇄ skill docs, core purity, links, frontmatter, status vocabulary
-npm test            # 37 tests over the rule engine and the sync layer
+npm test            # 40 tests over the rule engine and the sync layer
 npm run check:all   # both
 ```
 
