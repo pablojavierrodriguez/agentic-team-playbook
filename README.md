@@ -176,7 +176,7 @@ The core layer is validated to contain **zero** references to any specific produ
 │   └── validate-repo.mjs          # Self-consistency guardian
 ├── tests/                         # Rule engine test suite (node:test)
 ├── docs/
-│   ├── BACKLOG.md                 # Item pool + refinement flags
+│   ├── BACKLOG.md                 # Backlog convention → the tracker is GitHub Issues
 │   └── sprints/SPRINT_SPEC_TEMPLATE.md
 ├── .playbook-manifest.json        # What gets installed where
 ├── AGENTS.md                      # Master project instructions (template)
@@ -315,9 +315,24 @@ The framework holds itself to its own standard:
 
 ```bash
 npm run validate    # manifest ⇄ disk, rule catalog ⇄ skill docs, core purity, links, frontmatter, status vocabulary
-npm test            # 13 tests over the rule engine
+npm test            # 29 tests over the rule engine and the sync layer
 npm run check:all   # both
 ```
+
+---
+
+## 📋 Where the work lives
+
+| Artifact | Where | Holds |
+| :--- | :--- | :--- |
+| **Backlog** | [GitHub Issues](https://github.com/pablojavierrodriguez/gripm-playbook/issues) | Every open item, refined or not |
+| **Release log** | [`CHANGELOG.md`](CHANGELOG.md) | Only what has already shipped |
+| **Conventions** | [`docs/BACKLOG.md`](docs/BACKLOG.md) | Item template, hygiene rules, status lifecycle |
+
+> [!IMPORTANT]
+> The changelog is a release log, not a work log. An item that has not shipped belongs in an issue. `## [Unreleased]` stays empty on purpose.
+
+Found a defect? [Open an issue](https://github.com/pablojavierrodriguez/gripm-playbook/issues/new/choose) — not a changelog entry.
 
 ---
 
