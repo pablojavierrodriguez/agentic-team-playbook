@@ -52,6 +52,7 @@
     "AGENTS.md",
     "docs/BACKLOG.md",
     ".uxaudit.json",
+    "audit-ux-baseline.json",
     ".playbook-lock.json"
   ]
 }

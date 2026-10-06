@@ -11,20 +11,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.1.0] — 2026-10-06
 
+`PLAY-001` · `PLAY-002` · `PLAY-003` · `PLAY-004` · `DEV-184` · `DEV-187`
+
 ### Added
 
-- **`exclude` is now implemented in the UX auditor** (#3). The property was documented in the README but silently ignored by the runner. It resolves through a dependency-free glob supporting `**`, `*` and `?`. Each pattern matches both literally and at any depth, so `src/legacy/**` and `**/src/legacy/**` are equivalent and the author never has to guess the anchor. Excluded files are dropped before auditing and never reach the report.
-- **Regression test for multi-line JSX** (#3). A fixture reproduces the `UX-001` false positive and fails without the `countTagCloses` fix.
+- **The auditor now understands JSX nesting** (`PLAY-001`). This is the root cause behind two long-standing false-positive sources. `buildUnits` counted `<` openings against `>` closings as characters, so a self-closing `<Icon />` ended its parent's unit and `<button>` was separated from its own contents. A rule asking "what does this element contain" got an empty string, and the only way to answer it was to search the entire file — which made one `const Icon = () => null` turn every button in the file into an icon-only button. Units now track real nesting depth and expose three granularities:
+  - `text` — the opening tag and its attributes. Signatures match here, so a finding points at the element that carries the problem instead of its wrapper.
+  - `ownContent` — the element's own content, excluding descendants. This is how a rule asks "is *this* element the one rendering the value?".
+  - `scopeText` — the element plus every descendant. This is how a rule asks "does this element contain that?".
+- **`exclude` is implemented in the UX auditor** (`DEV-184`). The property was documented in the README but silently ignored by the runner. It resolves through a dependency-free glob supporting `**`, `*` and `?`. Each pattern matches both literally and at any depth, so `src/legacy/**` and `**/src/legacy/**` are equivalent. Excluded files are dropped before auditing.
+- **Accepted-observation baseline** (`PLAY-003`). `audit-ux-baseline.json` records the observations a project has already reviewed, so the auditor can be adopted on a codebase that already carries hundreds of findings without either silencing the gate or producing a report nobody reads. `--update-baseline` rewrites the snapshot. **`ERROR` is never absorbed** — a severity that breaks the build cannot be switched off by a file. Occurrences are counted with multiplicity, so a fifth instance of something already accepted four times is reported.
+- **`unlessVisibleText`** (`PLAY-002`). A new engine capability that asks whether an element renders visible text, stripping tags and expression containers. No token list can express it: `<button><span>Guardar</span></button>` is accessible without a single `aria-*` attribute.
 
 ### Fixed
 
-- **Multi-line JSX was split at the wrong boundary** (#3). `buildUnits` counted every `>` as a tag terminator, including the one in an arrow function (`=>`). That closed the logical unit early and pushed the escape hatch into the next unit, where it was no longer visible to the rule — the defect that made the `UX-001` false positive survive. `countTagCloses` now ignores `=>`.
-- **Transition references pointed at transitions that do not exist** (#3). `SPRINT_SPEC_TEMPLATE.md` and `TEAM_PLAYBOOK.md` referenced a `T6`, and mislabelled `T1`–`T4`. Both are aligned with `STATE_MACHINE.md`, which is the source of truth: `T1` for `doing → review`, `T2` for `review → ready`, `T3` for `review → doing`, `T4` for `ready → done`.
-- **This changelog had duplicate sections** (#4). `[2.0.1]` declared `### Fixed` twice with the same bullet in both, and `[2.0.0]` appeared as two separate headings, which split its entries across two blocks. Both sections are merged. The `[Unreleased]` link also compared from `v2.0.0`, so it under-reported every release since.
+- **One occurrence per file is gone** (`PLAY-002`). The engine carried `break; // one finding per rule per file keeps the report actionable`, which capped the report at one observation per rule per file. A consumer measured 49 reported findings against 487 actual — 90% of the signal hidden. It was also the reason the false positives went unnoticed: with the `break` in place, the minimal reproduction reported one false positive instead of two, because the scan stopped before the second case. The baseline replaces it as the noise-management mechanism.
+- **`UX-010` no longer reports buttons that show a visible label** (`PLAY-002`). Its escapes were all attribute-based (`aria-label`, `title=`, `aria-labelledby`, `sr-only`), so a button whose child is visible text was still reported.
+- **`UX-006` rewritten from `needsContent` to `nearby`** (`PLAY-001`). The rule pairs a padded scroll container with a fixed bottom bar, which are two different elements; it only ever worked because `needsContent` was file-scoped.
+- **`UX-004` and `UX-013` now declare `alsoContent`** (`PLAY-001`), so a finding points at the element rendering the value rather than at its wrapper.
+- **Multi-line JSX was split at the wrong boundary** (`DEV-184`). `buildUnits` counted every `>` as a tag terminator, including the one in an arrow function (`=>`), which closed the logical unit early and pushed the escape hatch into the next unit where the rule could not see it.
+- **Transition references pointed at transitions that do not exist** (`DEV-184`). `SPRINT_SPEC_TEMPLATE.md` and `TEAM_PLAYBOOK.md` referenced a `T6` and mislabelled `T1`–`T4`. Both are aligned with `STATE_MACHINE.md`, which is the source of truth.
+- **This changelog had duplicate sections.** `[2.0.1]` declared `### Fixed` twice with the same bullet in both, and `[2.0.0]` appeared as two separate headings. Both are merged, and the `[Unreleased]` link no longer compares from `v2.0.0`.
 
 ### Changed
 
-- **The backlog is now GitHub Issues, not a file in this repository** (#5). `README.md` already instructed the PM Orchestrator to read backlog issues through GitHub MCP, and the `STATE_MACHINE` requires each release to list items by their backlog ID, but no issue tracker existed — so unregistered work accumulated in this changelog instead. `docs/BACKLOG.md` keeps the item template and the hygiene rules and now points at the tracker; it is no longer a parallel ledger. **The changelog records releases, never open work.**
+- **The backlog is a Backlog.md item pool, and GitHub Issues is only the intake channel** (`PLAY-001`..`PLAY-004`). `README.md` already instructed the PM Orchestrator to read backlog issues through GitHub MCP and `STATE_MACHINE.md` requires each release to cite backlog IDs, but no item pool existed — so unregistered work accumulated in this changelog instead. Items now live in `backlog/tasks/` in the same Backlog.md format `gripm` and `dev-board` use, with the `PLAY-` prefix. **The changelog records releases, never open work.**
+
+### Removed
+
+- **The `agentic-team-playbook` bin** (`PLAY-004`), a leftover from the rename that `DEV-179` performed everywhere else. **Breaking.** Anyone invoking the old binary name must switch to `npx @gripm/playbook sync` or the `playbook` / `gripm-playbook` binaries.
 
 ---
 

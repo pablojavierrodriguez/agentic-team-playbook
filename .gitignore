@@ -37,3 +37,10 @@ pnpm-debug.log*
 # the audit trail that tells the sync which files carry local modifications.
 .playbook-backups/
 *.tgz
+
+# Auditor scratch
+# Neither .uxaudit.json nor audit-ux-baseline.json is ignored on purpose: in a
+# consuming project they are, respectively, the agreed opt-out configuration and
+# the agreed record of which observations were reviewed and accepted. Both belong
+# in version control.
+*.baseline.json.tmp

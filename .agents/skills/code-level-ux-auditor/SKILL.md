@@ -23,11 +23,37 @@ node scripts/audit-ux-code.cjs --strict   # falla también con WARNING
 node scripts/audit-ux-code.cjs --format json
 node scripts/audit-ux-code.cjs --list-rules
 node scripts/audit-ux-code.cjs --rule UX-006
+npm run audit:ux:baseline                 # snapshotear lo ya revisado
 ```
 
 - **El motor es agnóstico del stack.** Las reglas que dependen de una librería declaran `requires.deps` y se saltan solas si la dependencia no está en el `package.json` del proyecto. No hay nombres de archivo ni de proyecto en el motor.
 - ** severidades:** `ERROR` (rompe funcionalidad táctil, falla el audit sin `--strict`), `WARNING` (degrada, falla con `--strict`), `INFO` (higiene).
 - **Supresión:** `// ux-audit-ignore` desactiva todas las reglas de la línea; `// ux-audit-ignore UX-004` solo esa. Opt-out por proyecto en `.uxaudit.json` (`disableRules`, `exclude`).
+- **Baseline:** `audit-ux-baseline.json` registra las observaciones ya revisadas para poder adoptar el auditor sobre un codebase que ya tiene cientos de hallazgos, sin silenciar el gate ni ahogar en ruido irrecuperable. `npm run audit:ux:baseline` reescribe el snapshot. **`ERROR` nunca se absorbe**: una severidad que rompe el build no se silencia con un archivo.
+
+### Anatomía de una unidad
+
+El motor segmenta el archivo en **elementos JSX** y cada elemento expone tres granularidades. Elegir la correcta es lo que separa una regla precisa de una que inunda de falsos positivos:
+
+| Campo | Qué incluye | Para qué sirve |
+| :--- | :--- | :--- |
+| `text` | Solo el tag de apertura y sus atributos | `line`, `alsoLine`, `unlessLine` — la firma vive en el elemento que la porta, y el hallazgo apunta a ese elemento, no a su wrapper |
+| `ownContent` | El tag de apertura, el de cierre y los nodos de texto propios, **excluyendo** los descendientes | `alsoContent` — "¿este elemento es el que renderiza el valor?" |
+| `scopeText` | El elemento **más** todos sus descendientes | `needsContent`, `unlessContent`, `unlessVisibleText` — "¿este elemento contiene aquello?" |
+
+Ejemplo que separa las dos últimas:
+
+```tsx
+<div className="card">
+  <span>{format(date, "MMMM yyyy")}</span>
+</div>
+```
+
+Sobre el `<div>`: `needsContent: ["MMMM"]` matchea (el `<span>` es descendiente suyo), pero `alsoContent: ["MMMM"]` **no** — el `MMMM` vive dentro del hijo, no en el contenido propio del div. Sobre el `<span>` ambos matchean.
+
+Esa distinción es la que hace que `UX-004` reporte el `<span>` que renderiza la fecha y no el `<div>` que lo envuelve.
+
+- `unlessVisibleText: true` silencia la regla cuando el elemento renderiza texto visible. Ninguna lista de tokens puede expresar eso, y es lo que separa un botón etiquetado de uno icon-only: `<button><span>Guardar</span></button>` es accesible sin ningún atributo `aria-*`.
 
 > [!IMPORTANT]
 > **Regla de manutenção:** si agregás una firma nueva, su `id` debe existir en **ambos** lados (`ux-rules.json` y esta tabla) con el mismo título y severidad. `UX-001..UX-008` son IDs históricos: **nunca se renumeran**. Las firmas nuevas se agregan desde `UX-009`.

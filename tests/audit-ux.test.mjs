@@ -99,6 +99,74 @@ describe('detection', () => {
   });
 });
 
+describe('unit scoping (DEV-187)', () => {
+  test('UX-010 ignores a button whose child is visible text', () => {
+    const report = audit('react-app').report;
+    const findings = report.findings.filter((f) => f.rule === 'UX-010');
+
+    // Dev187Repro:5 carries aria-label, :6 plain text and :7 a <span> label.
+    // None of the three is an unnamed icon-only button.
+    for (const line of [5, 6, 7]) {
+      assert.ok(
+        !findings.some((f) => f.file.endsWith('Dev187Repro.tsx') && f.line === line),
+        `UX-010 must not report Dev187Repro.tsx:${line} — that button is accessible`,
+      );
+    }
+
+    // IconOnly.tsx:4 wraps <span>Guardar</span> across several lines.
+    assert.ok(
+      !findings.some((f) => f.file.endsWith('IconOnly.tsx') && f.line === 4),
+      'UX-010 must not report a multiline button that shows "Guardar"',
+    );
+  });
+
+  test('UX-010 still detects a genuinely unnamed icon-only button', () => {
+    const findings = audit('react-app').report.findings.filter((f) => f.rule === 'UX-010');
+
+    // Single line, and IconOnly.tsx:13 which nests <Icon /> across lines.
+    assert.ok(
+      findings.some((f) => f.file.endsWith('Dev187Repro.tsx') && f.line === 13),
+      'the fix must not silence UX-010 for an icon-only button on one line',
+    );
+    assert.ok(
+      findings.some((f) => f.file.endsWith('IconOnly.tsx') && f.line === 13),
+      'the fix must not silence UX-010 for an icon-only button split across lines',
+    );
+  });
+
+  test('needsContent is scoped to the element, not to the whole file', () => {
+    // UX-006 pairs a padded scroll container with a fixed bottom bar. Those are
+    // two different elements, so the rule asks for the bar nearby rather than in
+    // its own content.
+    const findings = audit('react-app').report.findings.filter((f) => f.rule === 'UX-006');
+    assert.deepEqual(findings.map((f) => f.line), [20], 'UX-006 must fire once, on the padded container');
+
+    // Negative control: the padding alone is not occlusion. Under the previous
+    // file-scoped check a file mentioning `bottom-0` anywhere matched everything.
+    const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'audit-ux-ux006-'));
+    fs.mkdirSync(path.join(temp, 'src'), { recursive: true });
+    fs.writeFileSync(
+      path.join(temp, 'src', 'List.tsx'),
+      'export const List = () => <div className="pb-16" />;\n',
+    );
+    assert.ok(
+      !audit(fixtureAt(temp)).report.findings.some((f) => f.rule === 'UX-006'),
+      'UX-006 must not fire without a fixed bottom bar nearby',
+    );
+    fs.rmSync(temp, { recursive: true, force: true });
+  });
+
+  test('a rule never fires on a wrapper that only contains the offending child', () => {
+    // UX-013 reports the element that renders the value. Reporting the outer
+    // wrapper instead would point developers at the wrong element.
+    const findings = audit('react-app').report.findings.filter((f) => f.rule === 'UX-013');
+    for (const finding of findings) {
+      if (!finding.file.endsWith('Violations.tsx')) continue;
+      assert.equal(finding.line, 27, 'UX-013 must point at the <b>, not at the wrapping div');
+    }
+  });
+});
+
 describe('suppression', () => {
   test('inline suppression silences the target line only', () => {
     const found = rulesIn('react-app');
@@ -156,6 +224,80 @@ describe('suppression', () => {
   test('an unknown rule id is a fatal usage error', () => {
     const result = audit('react-app', ['--rule', 'UX-999']);
     assert.equal(result.code, 2);
+  });
+});
+
+describe('baseline', () => {
+  function probeProject() {
+    const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'audit-ux-baseline-'));
+    fs.mkdirSync(path.join(temp, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(temp, 'package.json'), '{"name":"probe"}');
+    return temp;
+  }
+
+  function run(root, args = []) {
+    try {
+      const stdout = execFileSync(process.execPath, [AUDITOR, '--format', 'json', ...args], {
+        env: { ...process.env, AUDIT_UX_ROOT: root },
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      return { code: 0, report: JSON.parse(stdout) };
+    } catch (err) {
+      return { code: err.status, report: JSON.parse(err.stdout) };
+    }
+  }
+
+  const VIOLATION = 'export const A = () => <span className="text-[13px]">x</span>;\n';
+  const BLOCKER = 'export const B = () => <input type="number" />;\n';
+
+  test('without a baseline every observation is reported', () => {
+    const temp = probeProject();
+    fs.writeFileSync(path.join(temp, 'src', 'A.tsx'), VIOLATION);
+    const { report } = run(temp);
+    assert.equal(report.findings.length, 1);
+    assert.equal(report.baseline, undefined, 'no baseline file means nothing is absorbed');
+    fs.rmSync(temp, { recursive: true, force: true });
+  });
+
+  test('--update-baseline absorbs reviewed observations on the next run', () => {
+    const temp = probeProject();
+    fs.writeFileSync(path.join(temp, 'src', 'A.tsx'), VIOLATION);
+
+    const written = run(temp, ['--update-baseline']);
+    assert.equal(written.report.findings.length, 0, 'writing a baseline reports nothing');
+    assert.ok(fs.existsSync(path.join(temp, 'audit-ux-baseline.json')));
+
+    const after = run(temp);
+    assert.equal(after.report.findings.length, 0, 'a reviewed observation is absorbed');
+    assert.equal(after.report.baseline.absorbed, 1);
+    assert.equal(after.code, 0, 'an absorbed INFO must not fail the gate');
+    fs.rmSync(temp, { recursive: true, force: true });
+  });
+
+  test('a baseline never absorbs ERROR', () => {
+    const temp = probeProject();
+    fs.writeFileSync(path.join(temp, 'src', 'B.tsx'), BLOCKER);
+
+    run(temp, ['--update-baseline']);
+    const after = run(temp);
+    assert.equal(after.report.findings.length, 1, 'ERROR must survive the baseline');
+    assert.equal(after.code, 1, 'ERROR must keep failing the build');
+    fs.rmSync(temp, { recursive: true, force: true });
+  });
+
+  test('a new occurrence is reported even when the signature was accepted', () => {
+    const temp = probeProject();
+    fs.writeFileSync(path.join(temp, 'src', 'A.tsx'), VIOLATION);
+    run(temp, ['--update-baseline']);
+
+    // A different file carrying the same rule is a new occurrence, not the
+    // accepted one.
+    fs.writeFileSync(path.join(temp, 'src', 'B.tsx'), VIOLATION);
+    const after = run(temp);
+    assert.equal(after.report.findings.length, 1);
+    assert.ok(after.report.findings[0].file.endsWith('B.tsx'));
+    fs.rmSync(temp, { recursive: true, force: true });
   });
 });
 

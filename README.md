@@ -175,8 +175,9 @@ The core layer is validated to contain **zero** references to any specific produ
 │   ├── sync-playbook.mjs          # Installer / updater
 │   └── validate-repo.mjs          # Self-consistency guardian
 ├── tests/                         # Rule engine test suite (node:test)
+├── backlog/tasks/                 # Item pool, Backlog.md format (PLAY- prefix)
 ├── docs/
-│   ├── BACKLOG.md                 # Backlog convention → the tracker is GitHub Issues
+│   ├── BACKLOG.md                 # Backlog convention → items live in backlog/tasks/
 │   └── sprints/SPRINT_SPEC_TEMPLATE.md
 ├── .playbook-manifest.json        # What gets installed where
 ├── AGENTS.md                      # Master project instructions (template)
@@ -271,7 +272,10 @@ node scripts/audit-ux-code.cjs --strict        # fail on WARNING too
 node scripts/audit-ux-code.cjs --format json   # for CI
 node scripts/audit-ux-code.cjs --list-rules    # inspect the catalog
 node scripts/audit-ux-code.cjs --rule UX-006   # single signature
+npm run audit:ux:baseline                      # snapshot what was already reviewed
 ```
+
+**Every occurrence is reported, not one per file.** A codebase with 487 findings shows 487 — that is what a baseline is for. `audit-ux-baseline.json` records the observations already reviewed so a project can adopt the auditor without either silencing the gate or drowning in noise nobody will read. `ERROR` is never absorbed: a severity that breaks the build cannot be switched off by a file.
 
 **13 signatures:** `UX-001` decimal comma blocker · `UX-002` keyboard shortcuts on touch · `UX-003` drag/scroll collision · `UX-004` date localisation leak · `UX-005` autocapitalise trap · `UX-006` fixed bottom UI occlusion · `UX-007` horizontal crowding · `UX-008` micro-Jank · `UX-009` sub-44px target · `UX-010` unnamed icon button · `UX-011` arbitrary font size · `UX-012` no tactile feedback · `UX-013` missing tabular numerals.
 
@@ -315,7 +319,7 @@ The framework holds itself to its own standard:
 
 ```bash
 npm run validate    # manifest ⇄ disk, rule catalog ⇄ skill docs, core purity, links, frontmatter, status vocabulary
-npm test            # 29 tests over the rule engine and the sync layer
+npm test            # 37 tests over the rule engine and the sync layer
 npm run check:all   # both
 ```
 
@@ -325,14 +329,13 @@ npm run check:all   # both
 
 | Artifact | Where | Holds |
 | :--- | :--- | :--- |
-| **Backlog** | [GitHub Issues](https://github.com/pablojavierrodriguez/gripm-playbook/issues) | Every open item, refined or not |
+| **Backlog** | [`backlog/tasks/`](backlog/tasks) | Every open item, Backlog.md format, `PLAY-` prefix |
+| **Intake** | [GitHub Issues](https://github.com/pablojavierrodriguez/gripm-playbook/issues) | Where a defect is reported from outside |
 | **Release log** | [`CHANGELOG.md`](CHANGELOG.md) | Only what has already shipped |
-| **Conventions** | [`docs/BACKLOG.md`](docs/BACKLOG.md) | Item template, hygiene rules, status lifecycle |
+| **Conventions** | [`docs/BACKLOG.md`](docs/BACKLOG.md) | Item format, hygiene rules, status lifecycle |
 
 > [!IMPORTANT]
-> The changelog is a release log, not a work log. An item that has not shipped belongs in an issue. `## [Unreleased]` stays empty on purpose.
-
-Found a defect? [Open an issue](https://github.com/pablojavierrodriguez/gripm-playbook/issues/new/choose) — not a changelog entry.
+> The changelog is a release log, not a work log. An item that has not shipped belongs in `backlog/tasks/`. `## [Unreleased]` stays empty on purpose.
 
 ---
 

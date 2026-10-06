@@ -74,8 +74,10 @@
       "requires": { "deps": ["date-fns"] },
       "check": {
         "line": ["format("],
+        "alsoContent": ["format("],
         "needsContent": ["MMMM", "\"MMM\"", "'MMM'", "EEEE"],
-        "unlessLine": ["locale"]
+        "unlessLine": ["locale"],
+        "unlessContent": ["locale"]
       },
       "message": "date-fns format() with month/day names but no locale argument. Pass { locale: activeLocale }."
     },
@@ -102,8 +104,9 @@
       "fix": "Use pb-32 (or a CSS variable derived from the bar height) plus env(safe-area-inset-bottom) on the scroll container.",
       "check": {
         "line": ["pb-16", "pb-20", "pb-24"],
-        "needsContent": ["bottom-0", "BottomNav", "BottomBar", "BottomSheet", "fixed bottom"],
-        "unlessLine": ["pb-32", "pb-36", "pb-40", "safe-area", "pb-[calc"]
+        "nearby": ["bottom-0", "BottomNav", "BottomBar", "BottomSheet", "fixed bottom"],
+        "unlessNearby": ["pb-32", "pb-36", "pb-40", "safe-area", "pb-[calc"],
+        "window": 8
       },
       "message": "Insufficient bottom padding (pb-16/pb-20/pb-24) for a fixed bottom bar. Use pb-32 plus safe-area-inset-bottom."
     },
@@ -160,7 +163,8 @@
       "check": {
         "line": ["<button", "<Button", "motion.button"],
         "needsContent": ["Icon", "Trash", "Pencil", "Plus", "Search", "Settings", "MoreVertical", "Ellipsis", "XIcon", "XCircle"],
-        "unlessLine": ["aria-label", "title=", "aria-labelledby", "sr-only"]
+        "unlessLine": ["aria-label", "title=", "aria-labelledby", "sr-only"],
+        "unlessVisibleText": true
       },
       "message": "Icon-only button without aria-label / title / sr-only text. Add an accessible name for screen readers."
     },
@@ -199,6 +203,7 @@
       "fix": "Apply tabular-nums (or the project's monospace data token) to every numeric column.",
       "check": {
         "line": ["toLocaleString", "Intl.NumberFormat", "formatCurrency", "formatAmount", "currencyFormatter"],
+        "alsoContent": ["toLocaleString", "Intl.NumberFormat", "formatCurrency", "formatAmount", "currencyFormatter"],
         "unlessLine": ["tabular-nums", "font-mono", "fontMono"],
         "unlessNearby": ["tabular-nums", "font-mono", "fontMono"],
         "window": 3

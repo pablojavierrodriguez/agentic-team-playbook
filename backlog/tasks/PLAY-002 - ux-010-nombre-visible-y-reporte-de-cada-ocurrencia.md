@@ -1,0 +1,55 @@
+---
+id: PLAY-002
+title: "UX-010: nombre visible como escape, y reporte de toda ocurrencia en vez de una por archivo"
+status: review
+created_date: '2026-10-06'
+updated_date: '2026-10-06'
+labels:
+  - "ux-audit"
+  - "a11y"
+  - "upstream"
+  - "reporting"
+dependencies:
+  - PLAY-001
+priority: high
+type: bugfix
+---
+
+## Description
+
+<!-- SECTION:DESCRIPTION:BEGIN -->
+Dos defectos reportados por el dev de `gripm` en el retro `2026-10-06-auditoria-real-code-level-ux-auditor`.
+
+**1. `UX-010` no veía etiqueta de texto visible.** Sus escapes eran todos por atributo (`aria-label`, `title=`, `aria-labelledby`, `sr-only`), así que `<button><span>visible label</span></button>` se reportaba igual. Ninguna lista de tokens puede expresar "este control ya tiene un nombre visible"; hacía falta capacidad del motor.
+
+**2. `break` por archivo.** El motor traía `break; // one finding per rule per file keeps the report actionable`, que limitaba a una observación por regla por archivo. En `gripm` reportaba 49 hallazgos donde había 487: ocultaba el 90% del ruido y volvía inútil cualquier baseline.
+
+El defecto 2 era además la razón por la que el defecto 1 pasaba desapercibido upstream: con el `break`, la reproducción mínima reportaba **1** falso positivo en vez de 2, porque el recorrido cortaba antes del segundo caso.
+<!-- SECTION:DESCRIPTION:END -->
+
+## Acceptance Criteria
+
+<!-- AC:BEGIN -->
+- [x] #1 Nueva capacidad de motor `unlessVisibleText` que evalúa si el elemento renderiza texto, quitando tags y expresiones
+- [x] #2 `UX-010` no reporta botón con etiqueta de texto visible como hijo
+- [x] #3 `UX-010` sigue reportando un botón realmente icon-only sin nombre
+- [x] #4 El `break` por archivo se elimina: se reporta cada ocurrencia
+- [x] #5 El baseline reemplaza al `break` como mecanismo de gestión de ruido (ver PLAY-003)
+- [x] #6 Fixture de regresión con la reproducción mínima del dev
+- [x] #7 `npm run check:all` en verde
+<!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. `hasVisibleText(scopeText)`: quitar tags con `/<[^>]*>/g`, quitar expresiones con `/\{[^}]*\}/g`, y considerar que queda texto si sobrevive algo sin espacios.
+2. Declarar `unlessVisibleText: true` en `UX-010`.
+3. Eliminar el `break` del bucle de hallazgos.
+4. Tests que verifican las tres líneas de la reproducción mínima y el caso genuino, en una línea y en multilínea.
+<!-- SECTION:PLAN:END -->
+
+## Acceptance Criteria Status
+
+- Tests: `npm run check:all` → 37/37.
+- Pendiente: certificación QA (transición T2).
+- **Impacto en `gripm`:** el baseline de `gripm` queda invalidado por este cambio. Las 127 entradas de UX-010 significan otra cosa y deben regenerarse. Bloqueante de DEV-173.
