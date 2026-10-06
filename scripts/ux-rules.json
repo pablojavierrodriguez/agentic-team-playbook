@@ -165,7 +165,7 @@
       "impact": "Screen readers announce an unnamed button, making the control unusable.",
       "fix": "Add aria-label (preferred) or a visually hidden text span.",
       "check": {
-        "line": ["<button", "<Button", "motion.button"],
+        "line": ["<button", "<Button", "motion.button", "role=\"button\"", "role='button'"],
         "needsContent": ["Icon", "Trash", "Pencil", "Plus", "Search", "Settings", "MoreVertical", "Ellipsis", "XIcon", "XCircle"],
         "unlessLine": ["aria-label", "title=", "aria-labelledby", "sr-only"],
         "unlessVisibleText": true

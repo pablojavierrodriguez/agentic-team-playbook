@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.2.1] — 2026-10-06
+
+`DEV-188`
+
+### Fixed
+
+- **`unlessVisibleText` was inert for the most common button shape** (`DEV-188`). It counted only an element's *direct* text nodes and excluded nested elements, so `<button><Icon /><span>Guardar</span></button>` looked unlabelled and was reported. A control that shows "Guardar" to the user is not an unnamed control, and that markup is how labelled icon buttons are written in practice. Text rendered by descendants now counts, resolved bottom-up over the parse tree.
+
+  This shipped broken in `2.1.0` alongside the capability. The regression suite was the reason it was not caught: its fixture only had the single-line `<span>` case, and that case never exercised the defect because `needsContent` filtered it first for an unrelated reason. `IconOnly.tsx` now carries all five labelled shapes — direct text, wrapped label, multiline icon+label, multiline wrapped label, and a labelled `div[role=button]` — plus the two unlabelled ones, and the assertion lists exactly which two lines may be reported.
+
+- **A custom control was never covered** (`DEV-188`). `UX-010` matched `<button`, `<Button` and `motion.button`, so a `div[role=button]` or `span[role=button]` holding only an icon passed clean. ARIA buttons are a documented pattern and they were invisible to the rule. `role="button"` is now part of the signature.
+
+---
+
 ## [2.2.0] — 2026-10-06
 
 `PLAY-005`
@@ -132,7 +146,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Configured for npm publication under `@gripm/playbook` supporting `npx @gripm/playbook sync`.
 
-[Unreleased]: https://github.com/pablojavierrodriguez/gripm-playbook/compare/v2.2.0...HEAD
+[Unreleased]: https://github.com/pablojavierrodriguez/gripm-playbook/compare/v2.2.1...HEAD
+[2.2.1]: https://github.com/pablojavierrodriguez/gripm-playbook/releases/tag/v2.2.1
 [2.2.0]: https://github.com/pablojavierrodriguez/gripm-playbook/releases/tag/v2.2.0
 [2.1.0]: https://github.com/pablojavierrodriguez/gripm-playbook/releases/tag/v2.1.0
 [2.0.1]: https://github.com/pablojavierrodriguez/gripm-playbook/releases/tag/v2.0.1

@@ -103,12 +103,11 @@ describe('detection', () => {
 });
 
 describe('unit scoping (DEV-187)', () => {
-  test('UX-010 ignores a button whose child is visible text', () => {
+  test('UX-010 ignores a control that renders a visible label', () => {
     const report = audit('react-app').report;
     const findings = report.findings.filter((f) => f.rule === 'UX-010');
 
     // Dev187Repro:5 carries aria-label, :6 plain text and :7 a <span> label.
-    // None of the three is an unnamed icon-only button.
     for (const line of [5, 6, 7]) {
       assert.ok(
         !findings.some((f) => f.file.endsWith('Dev187Repro.tsx') && f.line === line),
@@ -116,24 +115,35 @@ describe('unit scoping (DEV-187)', () => {
       );
     }
 
-    // IconOnly.tsx:4 wraps <span>Guardar</span> across several lines.
-    assert.ok(
-      !findings.some((f) => f.file.endsWith('IconOnly.tsx') && f.line === 4),
-      'UX-010 must not report a multiline button that shows "Guardar"',
+    // IconOnly.tsx holds every labelled shape a control takes. Counting them
+    // explicitly is the point: an earlier version of this fixture only had the
+    // single-line span case, which made the suite blind to the defect the
+    // consumer reported — `unlessVisibleText` counted only direct text nodes, so
+    // a label wrapped in markup looked like no label at all.
+    const labelled = report.findings.filter((f) => f.file.endsWith('IconOnly.tsx') && f.rule === 'UX-010');
+    const reportedLines = labelled.map((f) => f.line).sort((a, b) => a - b);
+
+    assert.deepEqual(
+      reportedLines,
+      [49, 58],
+      'only the two controls with no accessible name may be reported',
     );
   });
 
-  test('UX-010 still detects a genuinely unnamed icon-only button', () => {
+  test('UX-010 detects a control with an icon and no accessible name', () => {
     const findings = audit('react-app').report.findings.filter((f) => f.rule === 'UX-010');
 
-    // Single line, and IconOnly.tsx:13 which nests <Icon /> across lines.
+    // IconOnly.tsx:49 is a <button> holding only <Icon /> across several lines;
+    // :53 is a div[role=button] holding only <Icon />. The second one is the
+    // shape a custom control takes, and a rule that only matched <button> left
+    // it completely uncovered.
     assert.ok(
-      findings.some((f) => f.file.endsWith('Dev187Repro.tsx') && f.line === 13),
-      'the fix must not silence UX-010 for an icon-only button on one line',
+      findings.some((f) => f.file.endsWith('IconOnly.tsx') && f.line === 49),
+      'a multiline icon-only <button> must be reported',
     );
     assert.ok(
-      findings.some((f) => f.file.endsWith('IconOnly.tsx') && f.line === 13),
-      'the fix must not silence UX-010 for an icon-only button split across lines',
+      findings.some((f) => f.file.endsWith('IconOnly.tsx') && f.line === 58),
+      'a div[role=button] holding only an icon must be reported',
     );
   });
 

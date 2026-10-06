@@ -651,6 +651,15 @@ function buildUnits(lines) {
   // element. Without this level a wrapper inherits its child's signature — a
   // `<div>` around `<span>{format(date, "MMMM")}</span>` would report the date
   // leak and point at the wrapper instead of the element rendering the value.
+  // Renderable text, bottom-up: an element's own text plus the text its
+  // descendants render. Attributes are excluded by construction (they live in
+  // the opening tag, which the segments skip) and `{...}` expressions are
+  // dropped because they render nothing on their own.
+  //
+  // Descendant text has to be included. A control labelled `<Icon /><span>
+  // Guardar</span>` shows "Guardar" to the user, so counting only the element's
+  // direct text nodes would call it unlabelled — which is how `unlessVisibleText`
+  // ended up inert for the most common button shape there is.
   for (const frame of allFrames) {
     const segments = [];
     let cursor = frame.tagEnd + 1;
@@ -664,15 +673,15 @@ function buildUnits(lines) {
     frame.unit.ownContent =
       text.slice(frame.at, frame.tagEnd + 1) + segments.join('') + text.slice(frame.closeAt, frame.spanEnd + 1);
 
-    // Renderable text: what a user actually reads. Attributes are excluded by
-    // construction, nested elements are excluded by the segments above, and
-    // `{...}` expressions are dropped because they render nothing on their own.
-    //
-    // This is computed from offsets rather than stripped with a regex on purpose.
-    // `/<[^>]*>/g` cannot tell a tag terminator from the `>` of an arrow, so
-    // `<button onClick={() => go()}>` would leave `go()}` behind and make an
-    // icon-only button look like it has a visible label.
     frame.unit.textContent = stripExpressions(segments.join(''));
+  }
+
+  for (const frame of allFrames.slice().reverse()) {
+    if (!frame.children.length) continue;
+    frame.unit.textContent = frame.children.reduce(
+      (sum, child) => sum + child.unit.textContent,
+      frame.unit.textContent,
+    );
   }
 
   // Statements outside JSX are units too, so line-based rules still see them.
