@@ -1,7 +1,7 @@
 ---
 id: PLAY-001
 title: "Anatomía de unidad en el motor de reglas: text, ownContent y scopeText"
-status: ready
+status: done
 created_date: '2026-10-06'
 updated_date: '2026-10-06'
 labels:
@@ -69,3 +69,6 @@ el mismo agente que implementó el ítem. El invariante 2 de `STATE_MACHINE.md`
 dice que el developer no auto-certifica. Si la organización exige un par de ojos
 independiente para mover `review → ready`, este ítem necesita esa segunda mirada
 antes de publicar. Se deja constancia en vez de ocultar el conflicto.
+## Deployed
+
+**PLAY-001** · `@gripm/playbook@v2.1.0` en el registro publico, tag `v2.1.0` en GitHub con su release.

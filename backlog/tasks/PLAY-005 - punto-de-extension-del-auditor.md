@@ -1,7 +1,7 @@
 ---
 id: PLAY-005
 title: "Punto de extensión del auditor: API pública, onlyFile y catálogo local por proyecto"
-status: doing
+status: done
 created_date: '2026-10-06'
 updated_date: '2026-10-06'
 labels:
@@ -88,3 +88,6 @@ no aparecía en el listado. La config se lee primero ahora.
 ## Note on the ID namespace
 
 Reservar `UX-NNN` para el catálogo canónico no es cosmético: es lo que evita que un consumidor lea "mi UX-009 es touch target" mientras el skill dice otra cosa. Un proyecto que necesita una firma propia elige su propio prefijo — `ENV-`, `APP-`, el que corresponda — y el motor lo acepta; lo que no puede es squatsar un ID canónico.
+## Deployed
+
+**PLAY-005** · `@gripm/playbook@v2.2.1` en el registro publico, tag `v2.2.1` en GitHub con su release.

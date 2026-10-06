@@ -1,7 +1,7 @@
 ---
 id: PLAY-006
 title: "UX-010: el texto visible de un descendiente cuenta, y los custom controls entran en la firma"
-status: ready
+status: done
 created_date: '2026-10-06'
 updated_date: '2026-10-06'
 labels:
@@ -71,3 +71,6 @@ Un caso de prueba que pasa por la razón equivocada no prueba nada. El fixture a
 Verificación independiente sobre el fixture: `UX-010` reporta exactamente las líneas 49 y 58, que son `<button onClick={remove}>` con solo `<Icon />` y `<div role="button">` con solo `<Icon />`. Las cinco formas etiquetadas, incluida la multilínea con icono, quedan limpias.
 
 Pendiente: publicación (T4).
+## Deployed
+
+**PLAY-006** · `@gripm/playbook@v2.2.1` en el registro publico, tag `v2.2.1` en GitHub con su release.

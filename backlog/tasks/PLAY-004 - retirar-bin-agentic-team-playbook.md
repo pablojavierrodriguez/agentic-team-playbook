@@ -1,7 +1,7 @@
 ---
 id: PLAY-004
 title: "Retirar el bin agentic-team-playbook, residuo del renombre a gripm-playbook"
-status: ready
+status: done
 created_date: '2026-10-06'
 updated_date: '2026-10-06'
 labels:
@@ -51,3 +51,6 @@ Es un residuo de bajo impacto pero con costo de mantenimiento real: mientras exi
 **Salvedad de proceso:** ver la nota de `PLAY-001`.
 
 - Pendiente: publicación (T4).
+## Deployed
+
+**PLAY-004** · `@gripm/playbook@v2.1.0` en el registro publico, tag `v2.1.0` en GitHub con su release.

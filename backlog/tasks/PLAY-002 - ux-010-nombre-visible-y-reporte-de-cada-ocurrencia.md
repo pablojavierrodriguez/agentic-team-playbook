@@ -1,7 +1,7 @@
 ---
 id: PLAY-002
 title: "UX-010: nombre visible como escape, y reporte de toda ocurrencia en vez de una por archivo"
-status: ready
+status: done
 created_date: '2026-10-06'
 updated_date: '2026-10-06'
 labels:
@@ -61,3 +61,6 @@ mismo agente que implementó, y el invariante 2 del state machine exige que `rev
 → ready` lo haga el rol de QA.
 
 - **Impacto en `gripm`:** el baseline de `gripm` queda invalidado por este cambio. Las 127 entradas de UX-010 significan otra cosa y deben regenerarse. Bloqueante de DEV-173.
+## Deployed
+
+**PLAY-002** · `@gripm/playbook@v2.1.0` en el registro publico, tag `v2.1.0` en GitHub con su release.

@@ -1,7 +1,7 @@
 ---
 id: PLAY-003
 title: "Baseline de observaciones aceptadas como capacidad genérica del auditor"
-status: ready
+status: done
 created_date: '2026-10-06'
 updated_date: '2026-10-06'
 labels:
@@ -64,3 +64,6 @@ una firma ya aceptada se reporta.
 **Salvedad de proceso:** ver la nota de `PLAY-001`.
 
 - **Desbloquea el cierre del fork de `gripm`.** Con esto, `gripm` puede dejar de preservar `audit-ux-code.cjs` y consumir el motor del playbook.
+## Deployed
+
+**PLAY-003** · `@gripm/playbook@v2.1.0` en el registro publico, tag `v2.1.0` en GitHub con su release.
