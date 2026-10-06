@@ -29,6 +29,14 @@
  *   --rule <ID>        Only run this rule (repeatable)
  *   --quiet            Only print the summary
  *   --update-baseline  Rewrite the accepted-observations snapshot and exit
+ *
+ * Programmatic use:
+ *
+ *   const { auditProject } = require('./audit-ux-code.cjs');
+ *   const { findings, summary } = auditProject({ root: process.cwd() });
+ *
+ * Importing this module does not run an audit; only executing it as a binary
+ * does. `auditProject` never prints or exits, so a consumer owns presentation.
  *   --help             Print usage
  *
  * Exit codes:
@@ -146,10 +154,89 @@ function loadRules() {
   return { version: parsed.version || 1, rules: parsed.rules };
 }
 
-function loadConfig(opts) {
+/**
+ * Loads a project-owned catalog and merges it with the canonical one.
+ *
+ * A project that needs its own signatures must not fork the engine to get them.
+ * It writes a catalog of its own and names it in `.uxaudit.json`; the canonical
+ * catalog stays untouched by the sync and the rules simply run alongside it.
+ *
+ * `UX-NNN` is reserved. Squatting a canonical id is what lets one project read
+ * "my UX-009 is touch target" while the skill documents something else, so a
+ * local catalog using that pattern is rejected rather than merged.
+ */
+function loadLocalRules(relativePath, root) {
+  const localPath = path.resolve(root, relativePath);
+
+  if (!fs.existsSync(localPath)) {
+    fatal(`Config "rules" points at ${localPath}, which does not exist.`);
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(fs.readFileSync(localPath, 'utf8'));
+  } catch (err) {
+    fatal(`Local rule catalog ${localPath} is not valid JSON: ${err.message}`);
+  }
+
+  if (!Array.isArray(parsed.rules)) {
+    fatal(`Local rule catalog ${localPath} has no "rules" array.`);
+  }
+
+  for (const rule of parsed.rules) {
+    if (typeof rule.id === 'string' && /^UX-\d{3}$/.test(rule.id)) {
+      fatal(
+        `Local rule ${rule.id} uses the reserved canonical pattern. ` +
+        'UX-NNN belongs to scripts/ux-rules.json so that one id means one thing ' +
+        'across every consumer. Give the local rule its own prefix.',
+      );
+    }
+  }
+
+  return { version: parsed.version || 1, rules: parsed.rules, localPath };
+}
+
+function loadCatalog(config, root) {
+  const canonical = loadRules();
+  if (!config || !config.rules) return { ...canonical, localRules: [] };
+
+  const local = loadLocalRules(config.rules, root);
+
+  const canonicalIds = new Set(canonical.rules.map((rule) => rule.id));
+  for (const rule of local.rules) {
+    if (canonicalIds.has(rule.id)) {
+      fatal(
+        `Local rule ${rule.id} collides with a canonical signature. ` +
+        'A local catalog adds rules; it cannot redefine shared ones.',
+      );
+    }
+  }
+
+  const merged = [
+    ...canonical.rules.map((rule) => ({ ...rule, origin: 'canonical' })),
+    ...local.rules.map((rule) => ({ ...rule, origin: 'local' })),
+  ];
+
+  for (const rule of merged) {
+    for (const field of ['id', 'title', 'severity', 'message']) {
+      if (!rule[field]) fatal(`Rule is missing required field "${field}": ${JSON.stringify(rule)}`);
+    }
+    if (!SEVERITY_ORDER.includes(rule.severity)) {
+      fatal(`Rule ${rule.id} has invalid severity "${rule.severity}".`);
+    }
+    if (!rule.check || !Array.isArray(rule.check.line) || !rule.check.line.length
+      && !rule.check.alsoContent) {
+      fatal(`Rule ${rule.id} has no detection signature.`);
+    }
+  }
+
+  return { version: canonical.version, rules: merged, localRules: local.rules, localPath: local.localPath };
+}
+
+function loadConfig(opts, root = ROOT) {
   const configPath = opts.config
-    ? path.resolve(ROOT, opts.config)
-    : path.join(ROOT, CONFIG_NAME);
+    ? path.resolve(root, opts.config)
+    : path.join(root, CONFIG_NAME);
 
   if (!fs.existsSync(configPath)) return { configPath, config: {} };
 
@@ -161,29 +248,29 @@ function loadConfig(opts) {
   }
 }
 
-function detectSourceDir(explicit, config) {
+function detectSourceDir(explicit, config, root = ROOT) {
   if (explicit) {
-    const resolved = path.resolve(ROOT, explicit);
+    const resolved = path.resolve(root, explicit);
     if (!fs.existsSync(resolved)) fatal(`--src directory does not exist: ${resolved}`);
     return resolved;
   }
 
   if (config.src) {
-    const resolved = path.resolve(ROOT, config.src);
+    const resolved = path.resolve(root, config.src);
     if (!fs.existsSync(resolved)) fatal(`Config "src" directory does not exist: ${resolved}`);
     return resolved;
   }
 
   for (const candidate of ['src', 'app', 'frontend', 'web', 'client']) {
-    const resolved = path.join(ROOT, candidate);
+    const resolved = path.join(root, candidate);
     if (fs.existsSync(resolved) && fs.statSync(resolved).isDirectory()) return resolved;
   }
 
   return null;
 }
 
-function loadDependencies() {
-  const pkgPath = path.join(ROOT, 'package.json');
+function loadDependencies(root = ROOT) {
+  const pkgPath = path.join(root, 'package.json');
   if (!fs.existsSync(pkgPath)) return new Set();
 
   try {
@@ -273,10 +360,10 @@ function isExcluded(relPath, excludes) {
 }
 
 /** Drops excluded files before auditing so their paths never reach the report. */
-function applyExcludes(files, excludes) {
+function applyExcludes(files, excludes, root = ROOT) {
   if (excludes.length === 0) return files;
 
-  return files.filter((file) => !isExcluded(toPosixPath(path.relative(ROOT, file)), excludes));
+  return files.filter((file) => !isExcluded(toPosixPath(path.relative(root, file)), excludes));
 }
 
 /** Returns '*' for a blanket suppression or the list of suppressed rule ids. */
@@ -616,6 +703,12 @@ function ruleAppliesToProject(rule, relPath, deps) {
 
   if ((check.unlessFile || []).some((token) => relPath.includes(token))) return false;
 
+  // The positive counterpart of `unlessFile`. Without it a rule scoped by
+  // context — "`truncate` inside a dialog" — cannot be expressed at all, because
+  // a file filter can only ever switch a rule off.
+  if ((check.onlyFile || []).length
+    && !(check.onlyFile || []).some((token) => relPath.includes(token))) return false;
+
   const required = rule.requires && rule.requires.deps;
   if (required && required.length && !required.some((dep) => deps.has(dep))) return false;
 
@@ -685,9 +778,9 @@ function lineMatches(rule, unit, lines, unitIndex, content) {
   return true;
 }
 
-function auditFile(filePath, rules, deps, disabledRules) {
+function auditFile(filePath, rules, deps, disabledRules, root = ROOT) {
   const findings = [];
-  const relPath = path.relative(ROOT, filePath);
+  const relPath = path.relative(root, filePath);
 
   let content;
   try {
@@ -787,8 +880,8 @@ function fingerprint(finding) {
   return `${finding.rule}|${finding.file}|${digest}`;
 }
 
-function loadBaseline() {
-  const file = path.join(ROOT, BASELINE_NAME);
+function loadBaseline(root = ROOT) {
+  const file = path.join(root, BASELINE_NAME);
   if (!fs.existsSync(file)) return { version: BASELINE_VERSION, entries: {} };
 
   try {
@@ -808,7 +901,7 @@ function loadBaseline() {
   return { version: BASELINE_VERSION, entries: {} };
 }
 
-function writeBaseline(findings) {
+function writeBaseline(findings, root = ROOT) {
   const entries = {};
   for (const finding of findings) {
     const key = fingerprint(finding);
@@ -822,7 +915,7 @@ function writeBaseline(findings) {
     entries,
   };
 
-  fs.writeFileSync(path.join(ROOT, BASELINE_NAME), `${JSON.stringify(payload, null, 2)}\n`);
+  fs.writeFileSync(path.join(root || ROOT, BASELINE_NAME), `${JSON.stringify(payload, null, 2)}\n`);
   return entries;
 }
 
@@ -833,8 +926,8 @@ function writeBaseline(findings) {
  * snapshot accepted four times is reported as new. ERROR never enters this path:
  * a severity that blocks the build cannot be silenced by a snapshot.
  */
-function diffAgainstBaseline(all) {
-  const baseline = loadBaseline();
+function diffAgainstBaseline(all, root = ROOT) {
+  const baseline = loadBaseline(root);
   const counts = new Map(Object.entries(baseline.entries || {}));
   const regressions = new Set();
 
@@ -854,8 +947,13 @@ function diffAgainstBaseline(all) {
 }
 
 function printRuleCatalog(catalog) {
+  const local = (catalog.localRules || []).length;
   console.log('');
-  console.log(`Rule catalog v${catalog.version} — ${catalog.rules.length} signatures`);
+  console.log(
+    `Rule catalog v${catalog.version} — ${catalog.rules.length} signatures`
+    + (local ? ` (${catalog.rules.length - local} canonical, ${local} local)` : ''),
+  );
+  if (catalog.localPath) console.log(`Local catalog: ${path.basename(catalog.localPath)}`);
   console.log('');
   for (const rule of catalog.rules) {
     const gated = rule.requires && rule.requires.deps
@@ -880,14 +978,15 @@ function main() {
     return;
   }
 
-  const catalog = loadRules();
+  // Config is read first so `--list-rules` can show the project's own signatures
+  // alongside the canonical ones.
+  const { config } = loadConfig(opts);
+  const catalog = loadCatalog(config, ROOT);
 
   if (opts.listRules) {
     printRuleCatalog(catalog);
     return;
   }
-
-  const { config } = loadConfig(opts);
 
   const unknown = opts.rules.filter((id) => !catalog.rules.some((rule) => rule.id === id));
   if (unknown.length) fatal(`Unknown rule id requested with --rule: ${unknown.join(', ')}`);
@@ -898,7 +997,7 @@ function main() {
     ? catalog.rules.filter((rule) => opts.rules.includes(rule.id))
     : catalog.rules;
 
-  const srcDir = detectSourceDir(opts.src, config);
+  const srcDir = detectSourceDir(opts.src, config, ROOT);
 
   if (!srcDir) {
     if (opts.format === 'json') {
@@ -912,16 +1011,16 @@ function main() {
     return;
   }
 
-  const deps = loadDependencies();
+  const deps = loadDependencies(ROOT);
   const excludes = compileExcludes(config.exclude);
   const files = [];
   const unreadable = [];
   collectFiles(srcDir, files, unreadable);
-  const scannedFiles = applyExcludes(files, excludes);
+  const scannedFiles = applyExcludes(files, excludes, ROOT);
 
   const findings = [];
   for (const file of scannedFiles) {
-    const result = auditFile(file, activeRules, deps, disabledRules);
+    const result = auditFile(file, activeRules, deps, disabledRules, ROOT);
     findings.push(...result.findings);
   }
 
@@ -939,7 +1038,7 @@ function main() {
   // A snapshot of already-reviewed observations lets a project adopt the
   // auditor on a codebase that already carries hundreds of findings, without
   // either silencing the gate or drowning in noise nobody will ever read.
-  const { keys: accepted } = diffAgainstBaseline(findings);
+  const { keys: unreviewed } = diffAgainstBaseline(findings, ROOT);
 
   if (opts.updateBaseline) {
     const entries = writeBaseline(findings.filter((f) => f.severity !== 'ERROR'));
@@ -961,7 +1060,7 @@ function main() {
     return;
   }
 
-  const reported = findings.filter((f) => accepted.has(f));
+  const reported = findings.filter((f) => unreviewed.has(f));
   const absorbed = findings.length - reported.length;
 
   const finalSummary = { total: reported.length, ERROR: 0, WARNING: 0, INFO: 0 };
@@ -999,4 +1098,100 @@ function main() {
   }
 }
 
-main();
+/**
+ * Runs an audit and returns the report, without printing or exiting.
+ *
+ * This is the programmatic entry point. It exists because a project that needs
+ * its own signatures must be able to *extend* the auditor, and forking the file
+ * was the only way to do that before. A consumer now imports this, adds whatever
+ * it needs around the findings, and keeps the canonical catalog untouched by the
+ * sync.
+ *
+ * @param {object}  [options]
+ * @param {string}  [options.root]        Project to audit. Defaults to the repo this file lives in.
+ * @param {string}  [options.src]         Source directory, relative to root.
+ * @param {string}  [options.config]      Config file path, relative to root.
+ * @param {string[]} [options.rules]      Only these rule ids. Defaults to every active rule.
+ * @param {boolean} [options.useBaseline] Subtract the accepted baseline. Defaults to true.
+ * @returns {{rulesVersion: number, srcDir: string|null, summary: object, findings: object[], unreadable: string[], absorbed: number}}
+ */
+function auditProject(options = {}) {
+  const root = options.root ? path.resolve(options.root) : ROOT;
+  const { config } = loadConfig({ config: options.config }, root);
+  const catalog = loadCatalog(config, root);
+
+  const disabledRules = new Set(config.disableRules || []);
+  const activeRules = options.rules && options.rules.length
+    ? catalog.rules.filter((rule) => options.rules.includes(rule.id))
+    : catalog.rules;
+
+  const srcDir = detectSourceDir(options.src, config, root);
+  if (!srcDir) {
+    return {
+      rulesVersion: catalog.version,
+      srcDir: null,
+      summary: { total: 0, ERROR: 0, WARNING: 0, INFO: 0 },
+      findings: [],
+      unreadable: [],
+      absorbed: 0,
+    };
+  }
+
+  const deps = loadDependencies(root);
+  const excludes = compileExcludes(config.exclude);
+  const files = [];
+  const unreadable = [];
+  collectFiles(srcDir, files, unreadable);
+
+  const findings = [];
+  for (const file of applyExcludes(files, excludes, root)) {
+    findings.push(...auditFile(file, activeRules, deps, disabledRules, root).findings);
+  }
+
+  const severityRank = { ERROR: 0, WARNING: 1, INFO: 2 };
+  findings.sort((a, b) => (
+    severityRank[a.severity] - severityRank[b.severity]
+    || a.file.localeCompare(b.file)
+    || a.line - b.line
+    || a.rule.localeCompare(b.rule)
+  ));
+
+  const applyBaseline = options.useBaseline !== false;
+
+  // `diffAgainstBaseline` returns the observations the snapshot does NOT cover,
+  // which are exactly the ones worth reporting.
+  let reported = findings;
+  let absorbed = 0;
+  if (applyBaseline) {
+    const { keys } = diffAgainstBaseline(findings, root);
+    reported = findings.filter((f) => keys.has(f));
+    absorbed = findings.length - reported.length;
+  }
+
+  const summary = { total: reported.length, ERROR: 0, WARNING: 0, INFO: 0 };
+  for (const finding of reported) summary[finding.severity] += 1;
+
+  return {
+    rulesVersion: catalog.version,
+    srcDir: path.relative(root, srcDir) || '.',
+    summary,
+    findings: reported,
+    unreadable,
+    absorbed,
+  };
+}
+
+module.exports = {
+  auditProject,
+  loadCatalog,
+  loadConfig,
+  loadRules,
+  buildUnits,
+  lineMatches,
+  hasVisibleText,
+  fingerprint,
+};
+
+// Running as a binary is what triggers an audit. Importing the module is not,
+// so a consumer can build on top of it without the CLI firing as a side effect.
+if (require.main === module) main();

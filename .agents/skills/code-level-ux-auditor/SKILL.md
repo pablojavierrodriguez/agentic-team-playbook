@@ -54,6 +54,27 @@ Sobre el `<div>`: `needsContent: ["MMMM"]` matchea (el `<span>` es descendiente 
 Esa distinción es la que hace que `UX-004` reporte el `<span>` que renderiza la fecha y no el `<div>` que lo envuelve.
 
 - `unlessVisibleText: true` silencia la regla cuando el elemento renderiza texto visible. Ninguna lista de tokens puede expresar eso, y es lo que separa un botón etiquetado de uno icon-only: `<button><span>Guardar</span></button>` es accesible sin ningún atributo `aria-*`.
+- `onlyFile` es el contrapositivo de `unlessFile`: corre la regla **solo** si el path contiene alguno de los tokens. Sin él, una regla acotada por contexto (`truncate` dentro de un diálogo) no es declarable, porque un filtro de archivo solo puede apagar una regla, nunca encenderla.
+
+### Reglas propias del proyecto
+
+Un proyecto que necesita firmas propias **no bifurca el motor**. Declara un catálogo suyo en `.uxaudit.json` y sus reglas corren junto a las canónicas:
+
+```json
+{ "src": "src", "rules": "audit-ux.local-rules.json" }
+```
+
+> [!CAUTION]
+> **`UX-NNN` está reservado** para `scripts/ux-rules.json`. Un catálogo local que use ese patrón se rechaza con error. Es lo que garantiza que un `UX-009` signifique lo mismo en todos los consumidores: cuando un proyecto leía su propio `UX-009` como "touch target" mientras el skill documentaba otra cosa, el catálogo dejó de ser confiable. Elegí otro prefijo.
+
+Para lo que el catálogo declarativo no alcanza, importá el motor en vez de copiarlo:
+
+```js
+const { auditProject } = require('@gripm/playbook/scripts/audit-ux-code.cjs');
+const { findings, summary } = auditProject({ root: process.cwd() });
+```
+
+Importar el módulo **no** corre una auditoría; solo ejecutarlo como binario lo hace. `auditProject` devuelve `{ rulesVersion, srcDir, summary, findings, unreadable, absorbed }` y no imprime ni sale, así que el consumidor maneja la presentación.
 
 > [!IMPORTANT]
 > **Regla de manutenção:** si agregás una firma nueva, su `id` debe existir en **ambos** lados (`ux-rules.json` y esta tabla) con el mismo título y severidad. `UX-001..UX-008` son IDs históricos: **nunca se renumeran**. Las firmas nuevas se agregan desde `UX-009`.

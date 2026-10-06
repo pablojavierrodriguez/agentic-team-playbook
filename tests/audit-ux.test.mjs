@@ -5,9 +5,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const AUDITOR = path.join(ROOT, 'scripts', 'audit-ux-code.cjs');
+const requireCjs = createRequire(import.meta.url);
+const VIOLATION_SNIPPET = 'export const A = () => <span className="text-[13px]">x</span>;\n';
 const RULES = JSON.parse(fs.readFileSync(path.join(ROOT, 'scripts', 'ux-rules.json'), 'utf8'));
 const ALL_IDS = RULES.rules.map((rule) => rule.id);
 
@@ -334,6 +337,137 @@ describe('baseline', () => {
     const after = run(temp);
     assert.equal(after.report.findings.length, 1);
     assert.ok(after.report.findings[0].file.endsWith('B.tsx'));
+    fs.rmSync(temp, { recursive: true, force: true });
+  });
+});
+
+describe('programmatic API (PLAY-005)', () => {
+  function createProject() {
+    const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'audit-ux-api-'));
+    fs.mkdirSync(path.join(temp, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(temp, 'package.json'), '{"name":"probe"}');
+    return temp;
+  }
+
+  const LOCAL_RULE = {
+    version: 1,
+    rules: [{
+      id: 'ENV-002',
+      title: 'Truncated text in a dialog',
+      severity: 'WARNING',
+      message: '`truncate` in a dialog.',
+      check: { line: ['truncate'], onlyFile: ['Modal', 'Dialog'] },
+    }],
+  };
+
+  function writeLocalCatalog(root, catalog) {
+    fs.writeFileSync(path.join(root, 'rules.json'), JSON.stringify(catalog, null, 2));
+  }
+
+  test('importing the module does not run the audit', () => {
+    // Forcing the module through a child process and asserting empty stdout is
+    // what proves the CLI is guarded. A require() in this file would be a no-op
+    // either way.
+    const script = [
+      `const api = require(${JSON.stringify(AUDITOR)});`,
+      'if (typeof api.auditProject !== "function") process.exit(3);',
+    ].join('');
+    const stdout = execFileSync(process.execPath, ['-e', script], { encoding: 'utf8' });
+    assert.equal(stdout, '', 'requiring the auditor must not print anything');
+  });
+
+  test('auditProject returns a report without printing or exiting', () => {
+    const temp = createProject();
+    fs.writeFileSync(path.join(temp, 'src', 'A.tsx'), VIOLATION_SNIPPET);
+    const { auditProject } = requireCjs(AUDITOR);
+    const report = auditProject({ root: temp, useBaseline: false });
+
+    assert.equal(report.srcDir, 'src');
+    assert.equal(report.findings.length, 1);
+    assert.equal(report.summary.total, 1);
+    assert.ok(Array.isArray(report.unreadable));
+  });
+
+  test('onlyFile restricts a rule to matching paths', () => {
+    const temp = createProject();
+    fs.writeFileSync(path.join(temp, 'src', 'ConfirmDialog.tsx'), 'export const A = () => <p className="truncate">x</p>;\n');
+    fs.writeFileSync(path.join(temp, 'src', 'Overlays.tsx'), 'export const B = () => <p className="truncate">y</p>;\n');
+    writeLocalCatalog(temp, LOCAL_RULE);
+    fs.writeFileSync(
+      path.join(temp, '.uxaudit.json'),
+      JSON.stringify({ src: 'src', rules: 'rules.json' }),
+    );
+
+    const { auditProject } = requireCjs(AUDITOR);
+    const report = auditProject({ root: temp, useBaseline: false });
+
+    assert.equal(report.findings.length, 1, 'only the dialog file must be reported');
+    assert.ok(report.findings[0].file.endsWith('ConfirmDialog.tsx'));
+    assert.equal(report.findings[0].rule, 'ENV-002');
+    fs.rmSync(temp, { recursive: true, force: true });
+  });
+
+  test('a local catalog runs alongside the canonical one', () => {
+    const temp = createProject();
+    fs.writeFileSync(path.join(temp, 'src', 'ConfirmDialog.tsx'), 'export const A = () => <p className="truncate">x</p>;\n');
+    writeLocalCatalog(temp, LOCAL_RULE);
+    fs.writeFileSync(
+      path.join(temp, '.uxaudit.json'),
+      JSON.stringify({ src: 'src', rules: 'rules.json' }),
+    );
+
+    const result = audit(fixtureAt(temp), ['--format', 'json', '--rule', 'ENV-002']);
+    assert.equal(result.report.findings.length, 1, 'the local rule is reachable by id');
+
+    // The canonical catalog is untouched and still complete.
+    assert.equal(ALL_IDS.length, 13);
+    fs.rmSync(temp, { recursive: true, force: true });
+  });
+
+  test('a local rule may not squat a canonical UX-NNN id', () => {
+    const temp = createProject();
+    writeLocalCatalog(temp, { version: 1, rules: [{ ...LOCAL_RULE.rules[0], id: 'UX-009' }] });
+    fs.writeFileSync(
+      path.join(temp, '.uxaudit.json'),
+      JSON.stringify({ src: 'src', rules: 'rules.json' }),
+    );
+
+    let stderr = '';
+    try {
+      execFileSync(process.execPath, [AUDITOR, '--format', 'json'], {
+        env: { ...process.env, AUDIT_UX_ROOT: temp },
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+    } catch (err) {
+      stderr = err.stdout || '';
+      assert.equal(err.status, 2, 'a reserved id is a fatal usage error');
+    }
+    assert.match(stderr, /reserved canonical pattern/);
+    fs.rmSync(temp, { recursive: true, force: true });
+  });
+
+  test('a missing local catalog is a fatal usage error, not a silent skip', () => {
+    const temp = createProject();
+    fs.writeFileSync(
+      path.join(temp, '.uxaudit.json'),
+      JSON.stringify({ src: 'src', rules: 'nope.json' }),
+    );
+
+    let out = '';
+    let status = 0;
+    try {
+      out = execFileSync(process.execPath, [AUDITOR, '--format', 'json'], {
+        env: { ...process.env, AUDIT_UX_ROOT: temp },
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+    } catch (err) {
+      status = err.status;
+      out = err.stdout || '';
+    }
+    assert.equal(status, 2);
+    assert.match(out, /does not exist/);
     fs.rmSync(temp, { recursive: true, force: true });
   });
 });

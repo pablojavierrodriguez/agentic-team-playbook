@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.2.0] — 2026-10-06
+
+`PLAY-005`
+
+### Added
+
+- **The auditor exposes a programmatic API.** `audit-ux-code.cjs` exports `auditProject`, `loadCatalog`, `loadConfig`, `loadRules`, `buildUnits`, `lineMatches`, `hasVisibleText` and `fingerprint`, and the CLI is guarded by `require.main === module`. Importing the module no longer runs an audit. This exists because a project that needs its own signatures had exactly one option — fork the file — and a consumer's fork had grown to 779 lines of divergence.
+- **`auditProject(options)`** returns `{ rulesVersion, srcDir, summary, findings, unreadable, absorbed }` and never prints or exits, so the consumer owns presentation. Options: `root`, `src`, `config`, `rules`, `useBaseline`.
+- **Project-owned rule catalogs.** `.uxaudit.json` accepts a `rules` path; its rules run alongside the canonical ones and the canonical catalog stays untouched by the sync.
+- **`onlyFile`**, the positive counterpart of `unlessFile`. A rule scoped by context — "`truncate` inside a dialog" — was not declarable before, because a file filter could only ever switch a rule off.
+
+### Changed
+
+- **`UX-NNN` is reserved for the canonical catalog.** A local rule using that pattern is rejected with an error rather than merged. One id has to mean one thing across every consumer: a project reading its own `UX-009` as "touch target" while the skill documents something else is exactly how a catalog stops being trustworthy. Local rules pick their own prefix.
+- `--list-rules` reads the project config first, so local signatures show up alongside the canonical ones, labelled by origin.
+
+### Fixed
+
+- **`useBaseline: false` reported nothing.** `diffAgainstBaseline` returns the observations the snapshot does *not* cover — the ones worth reporting — and disabling the baseline handed the filter an empty set, which discarded every finding.
+
+---
+
 ## [2.1.0] — 2026-10-06
 
 `PLAY-001` · `PLAY-002` · `PLAY-003` · `PLAY-004` · `DEV-184` · `DEV-187`
@@ -110,7 +132,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Configured for npm publication under `@gripm/playbook` supporting `npx @gripm/playbook sync`.
 
-[Unreleased]: https://github.com/pablojavierrodriguez/gripm-playbook/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/pablojavierrodriguez/gripm-playbook/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/pablojavierrodriguez/gripm-playbook/releases/tag/v2.2.0
 [2.1.0]: https://github.com/pablojavierrodriguez/gripm-playbook/releases/tag/v2.1.0
 [2.0.1]: https://github.com/pablojavierrodriguez/gripm-playbook/releases/tag/v2.0.1
 [2.0.0]: https://github.com/pablojavierrodriguez/gripm-playbook/releases/tag/v2.0.0

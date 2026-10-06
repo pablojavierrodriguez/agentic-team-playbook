@@ -287,9 +287,48 @@ npm run audit:ux:baseline                      # snapshot what was already revie
 {
   "src": "src",
   "disableRules": ["UX-011"],
-  "exclude": ["src/legacy/**", "**/generated/*.tsx"]
+  "exclude": ["src/legacy/**", "**/generated/*.tsx"],
+  "rules": "audit-ux.local-rules.json"
 }
 ```
+
+### Extending it without forking
+
+A project that needs its own signatures names a catalog of its own in `"rules"` and its rules run alongside the canonical ones:
+
+```json
+// .uxaudit.json
+{ "src": "src", "rules": "audit-ux.local-rules.json" }
+```
+
+```json
+// audit-ux.local-rules.json
+{
+  "version": 1,
+  "rules": [{
+    "id": "ENV-002",
+    "title": "Truncated text in a dialog",
+    "severity": "WARNING",
+    "signature": "`truncate` inside a dialog component.",
+    "impact": "The ellipsis hides the impact the user is being asked to confirm.",
+    "fix": "Use `break-words leading-relaxed`.",
+    "check": { "line": ["truncate"], "onlyFile": ["Modal", "Dialog"] },
+    "message": "`truncate` in a dialog."
+  }]
+}
+```
+
+**`UX-NNN` is reserved.** A local rule using that pattern is rejected with an error, because one id has to mean one thing across every consumer — a project reading its own `UX-009` as "touch target" while the skill documents something else is how catalogs stop being trustworthy. Pick your own prefix.
+
+**For anything the declarative catalog cannot express**, import the engine instead of copying it:
+
+```js
+const { auditProject } = require('@gripm/playbook/scripts/audit-ux-code.cjs');
+
+const { findings, summary } = auditProject({ root: process.cwd() });
+```
+
+Importing the module does not run an audit; only executing it as a binary does. `auditProject` returns `{ rulesVersion, srcDir, summary, findings, unreadable, absorbed }` and never prints or exits, so you own the presentation. Also exported: `loadCatalog`, `loadConfig`, `loadRules`, `buildUnits`, `lineMatches`, `hasVisibleText`, `fingerprint`.
 
 `exclude` supports `**` (any depth), `*` (within one segment) and `?`. Each pattern matches both as written, relative to the project root, and at any depth, so `src/legacy/**` and `**/src/legacy/**` are equivalent. Excluded files are dropped before the audit runs, so they never reach the report.
 
@@ -319,7 +358,7 @@ The framework holds itself to its own standard:
 
 ```bash
 npm run validate    # manifest ⇄ disk, rule catalog ⇄ skill docs, core purity, links, frontmatter, status vocabulary
-npm test            # 40 tests over the rule engine and the sync layer
+npm test            # 46 tests over the rule engine and the sync layer
 npm run check:all   # both
 ```
 
