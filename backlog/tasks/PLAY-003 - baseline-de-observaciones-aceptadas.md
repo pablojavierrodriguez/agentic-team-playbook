@@ -1,7 +1,7 @@
 ---
 id: PLAY-003
 title: "Baseline de observaciones aceptadas como capacidad genérica del auditor"
-status: review
+status: ready
 created_date: '2026-10-06'
 updated_date: '2026-10-06'
 labels:
@@ -55,6 +55,12 @@ El baseline es genérico: cualquier proyecto con ruido cosmático acumulado lo n
 
 ## Acceptance Criteria Status
 
-- Tests: `npm run check:all` → 37/37, 4 de ellos nuevos en `describe('baseline')`.
-- Pendiente: certificación QA (transición T2).
+**Certificado (T2) el 2026-10-06.** `npm run validate` consistente · `npm test` **40/40** ·
+ciclo de baseline verificado end-to-end sobre un proyecto de prueba: sin baseline
+absorbe nada, `--update-baseline` escribe y sale, el run posterior absorbe lo
+revisado, `ERROR` sobrevive al snapshot y falla el gate, y una ocurrencia nueva de
+una firma ya aceptada se reporta.
+
+**Salvedad de proceso:** ver la nota de `PLAY-001`.
+
 - **Desbloquea el cierre del fork de `gripm`.** Con esto, `gripm` puede dejar de preservar `audit-ux-code.cjs` y consumir el motor del playbook.

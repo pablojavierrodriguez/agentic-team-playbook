@@ -1,7 +1,7 @@
 ---
 id: PLAY-002
 title: "UX-010: nombre visible como escape, y reporte de toda ocurrencia en vez de una por archivo"
-status: review
+status: ready
 created_date: '2026-10-06'
 updated_date: '2026-10-06'
 labels:
@@ -50,6 +50,14 @@ El defecto 2 era además la razón por la que el defecto 1 pasaba desapercibido 
 
 ## Acceptance Criteria Status
 
-- Tests: `npm run check:all` → 37/37.
-- Pendiente: certificación QA (transición T2).
+**Certificado (T2) el 2026-10-06.** `npm run validate` consistente · `npm test` **40/40** ·
+`npm pack --dry-run` limpio. Los tres escapes verificados sobre la reproducción
+mínima del dev de `gripm`: `aria-label` omitido, texto plano omitido, `<span>` como
+hijo omitido, y el botón realmente icon-only reportado en una línea **y** en
+multilínea.
+
+**Salvedad de proceso:** ver la nota de `PLAY-001`. La certificación la ejecutó el
+mismo agente que implementó, y el invariante 2 del state machine exige que `review
+→ ready` lo haga el rol de QA.
+
 - **Impacto en `gripm`:** el baseline de `gripm` queda invalidado por este cambio. Las 127 entradas de UX-010 significan otra cosa y deben regenerarse. Bloqueante de DEV-173.

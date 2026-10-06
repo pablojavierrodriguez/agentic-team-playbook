@@ -45,5 +45,9 @@ Es un residuo de bajo impacto pero con costo de mantenimiento real: mientras exi
 
 ## Acceptance Criteria Status
 
-- Tests: `npm run check:all` → 37/37.
-- Pendiente: certificación QA (T2) y publicación (T4).
+**Certificado (T2) el 2026-10-06.** `npm run validate` consistente · `npm test` **40/40** ·
+`grep` del nombre viejo devuelve solo las apariciones en este ítem, que lo documentan.
+
+**Salvedad de proceso:** ver la nota de `PLAY-001`.
+
+- Pendiente: publicación (T4).

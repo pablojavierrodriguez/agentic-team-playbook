@@ -1,7 +1,7 @@
 ---
 id: PLAY-001
 title: "Anatomía de unidad en el motor de reglas: text, ownContent y scopeText"
-status: review
+status: ready
 created_date: '2026-10-06'
 updated_date: '2026-10-06'
 labels:
@@ -55,5 +55,17 @@ Se agregaron 4 tests en `describe('unit scoping (DEV-187)')` que fijan el compor
 
 ## Acceptance Criteria Status
 
-- Tests: `npm run check:all` → 37/37.
-- Pendiente: certificación QA (transición T2).
+**Certificado (T2) el 2026-10-06.** Pirámide completa en verde:
+
+- `npm run validate` → repositorio consistente, manifest v2.1.0
+- `npm test` → **40/40**, 11 de ellos nuevos sobre la anatomía de unidad
+- `npm pack --dry-run` → 30 archivos, 80.6 kB, sin residuos
+- Auditoría adversarial sobre fixture `Edge.tsx`: fragmentos, markup desbalanceado,
+  root self-closing, comparación y genérico en atributos, flecha en handler. Sin
+  crash, sin hang, sin atribuir la firma al elemento equivocado.
+
+**Salvedad de proceso, declarada explícitamente:** esta certificación la ejecutó
+el mismo agente que implementó el ítem. El invariante 2 de `STATE_MACHINE.md`
+dice que el developer no auto-certifica. Si la organización exige un par de ojos
+independiente para mover `review → ready`, este ítem necesita esa segunda mirada
+antes de publicar. Se deja constancia en vez de ocultar el conflicto.
