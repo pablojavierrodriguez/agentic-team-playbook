@@ -371,6 +371,53 @@ function findTagEnd(text, from) {
 }
 
 /**
+ * Removes `{...}` expression containers, respecting nesting and quotes.
+ *
+ * A JSX expression renders whatever it evaluates to, not its own source, so the
+ * source cannot be read as visible text.
+ */
+function stripExpressions(source) {
+  let out = '';
+  let i = 0;
+
+  while (i < source.length) {
+    const ch = source[i];
+
+    if (ch === '"' || ch === "'" || ch === '`') {
+      const quote = ch;
+      i += 1;
+      while (i < source.length && source[i] !== quote) {
+        if (source[i] === '\\') i += 1;
+        i += 1;
+      }
+      i += 1;
+      continue;
+    }
+
+    if (ch === '{') {
+      let depth = 0;
+      while (i < source.length) {
+        if (source[i] === '{') depth += 1;
+        else if (source[i] === '}') {
+          depth -= 1;
+          if (depth === 0) {
+            i += 1;
+            break;
+          }
+        }
+        i += 1;
+      }
+      continue;
+    }
+
+    out += ch;
+    i += 1;
+  }
+
+  return out;
+}
+
+/**
  * Groups lines into JSX elements.
  *
  * Every element produces one unit carrying two granularities:
@@ -412,9 +459,10 @@ function buildUnits(lines) {
     return lo;
   };
 
-  const closeFrame = (frame, endLine, spanEnd) => {
+  const closeFrame = (frame, endLine, spanEnd, closeAt) => {
     frame.endLine = endLine;
     frame.spanEnd = spanEnd;
+    frame.closeAt = closeAt;
 
     const start = Math.min(frame.startLine, endLine);
     const unit = {
@@ -473,12 +521,12 @@ function buildUnits(lines) {
         // unbalanced. It is closed here rather than dropped, so an unclosed
         // element never swallows the rest of the file and never hides a finding.
         for (let n = stack.length - 1; n > index; n -= 1) {
-          closeFrame(stack[n], headEndLine, at - 1);
+          closeFrame(stack[n], headEndLine, at - 1, at);
         }
 
         const frame = stack[index];
         stack.length = index;
-        closeFrame(frame, headEndLine, tagEnd);
+        closeFrame(frame, headEndLine, tagEnd, at);
       }
 
       i = tagEnd + 1;
@@ -498,7 +546,7 @@ function buildUnits(lines) {
     };
 
     if (/\/>\s*$/.test(tagText)) {
-      closeFrame(frame, headEndLine, tagEnd);
+      closeFrame(frame, headEndLine, tagEnd, tagEnd + 1);
     } else {
       stack.push(frame);
     }
@@ -509,7 +557,7 @@ function buildUnits(lines) {
   // Unbalanced markup must not swallow the rest of the file.
   while (stack.length) {
     const frame = stack.pop();
-    closeFrame(frame, lineOf(text.length - 1), text.length - 1);
+    closeFrame(frame, lineOf(text.length - 1), text.length - 1, text.length);
   }
 
   // An element's own content: its source minus the source of every nested
@@ -517,13 +565,27 @@ function buildUnits(lines) {
   // `<div>` around `<span>{format(date, "MMMM")}</span>` would report the date
   // leak and point at the wrapper instead of the element rendering the value.
   for (const frame of allFrames) {
-    let own = '';
-    let cursor = frame.at;
+    const segments = [];
+    let cursor = frame.tagEnd + 1;
+
     for (const child of frame.children) {
-      if (child.at > cursor) own += text.slice(cursor, child.at);
+      if (child.at > cursor) segments.push(text.slice(cursor, child.at));
       cursor = Math.max(cursor, child.spanEnd + 1);
     }
-    frame.unit.ownContent = own + text.slice(cursor, frame.spanEnd + 1);
+    if (frame.closeAt > cursor) segments.push(text.slice(cursor, frame.closeAt));
+
+    frame.unit.ownContent =
+      text.slice(frame.at, frame.tagEnd + 1) + segments.join('') + text.slice(frame.closeAt, frame.spanEnd + 1);
+
+    // Renderable text: what a user actually reads. Attributes are excluded by
+    // construction, nested elements are excluded by the segments above, and
+    // `{...}` expressions are dropped because they render nothing on their own.
+    //
+    // This is computed from offsets rather than stripped with a regex on purpose.
+    // `/<[^>]*>/g` cannot tell a tag terminator from the `>` of an arrow, so
+    // `<button onClick={() => go()}>` would leave `go()}` behind and make an
+    // icon-only button look like it has a visible label.
+    frame.unit.textContent = stripExpressions(segments.join(''));
   }
 
   // Statements outside JSX are units too, so line-based rules still see them.
@@ -561,23 +623,19 @@ function ruleAppliesToProject(rule, relPath, deps) {
 }
 
 /**
- * Whether an element's subtree renders any visible text.
+ * Whether an element renders any visible text.
  *
  * This is what separates an icon-only button from a labelled one, and a token
  * list cannot express it: `<button><span>Guardar</span></button>` is accessible
  * because the user sees "Guardar", and no `aria-*` attribute is involved. The
  * escapes an attribute list can hold never cover that case.
  *
- * Tags and expression containers are removed, then whatever survives is the text
- * the user actually reads. An empty result means the element carries imagery or
- * nothing at all.
+ * `textContent` is derived from parse offsets rather than stripped from the raw
+ * source, so an arrow function inside an attribute cannot be mistaken for a label.
  */
-function hasVisibleText(scopeText) {
-  return scopeText
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\{[^}]*\}/g, ' ')
-    .replace(/\s+/g, '')
-    .length > 0;
+function hasVisibleText(unit) {
+  if (typeof unit.textContent === 'string') return unit.textContent.trim().length > 0;
+  return false;
 }
 
 /**
@@ -615,7 +673,7 @@ function lineMatches(rule, unit, lines, unitIndex, content) {
   if (anyIn(check.unlessLine || [])) return false;
   if (anyInScope(check.unlessContent || [])) return false;
   if ((check.needsContent || []).length && !anyInScope(check.needsContent)) return false;
-  if (check.unlessVisibleText && hasVisibleText(scope)) return false;
+  if (check.unlessVisibleText && hasVisibleText(unit)) return false;
 
   const radius = typeof check.window === 'number' ? check.window : 6;
   if ((check.nearby || []).length || (check.unlessNearby || []).length) {

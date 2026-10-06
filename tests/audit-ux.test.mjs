@@ -156,6 +156,37 @@ describe('unit scoping (DEV-187)', () => {
     fs.rmSync(temp, { recursive: true, force: true });
   });
 
+  test('a handler containing `=>` is not mistaken for a visible label', () => {
+    // `<button onClick={() => go()}>` has a `>` that is not a tag terminator.
+    // A regex strip of `/<[^>]*>/g` stops there and leaves `go()}` behind, which
+    // makes an icon-only button look like it renders text and silences UX-010.
+    const findings = audit('react-app').report.findings.filter((f) => f.rule === 'UX-010');
+    assert.ok(
+      findings.some((f) => f.file.endsWith('Edge.tsx') && f.line === 27),
+      'UX-010 must fire on an icon-only button whose handler contains an arrow',
+    );
+  });
+
+  test('UX-001 survives a `>` inside an attribute expression', () => {
+    // The multiline escape-hatch regression from DEV-184, now with a comparison
+    // inside the handler: `buildUnits` must not close the element at that `>`.
+    const findings = audit('react-app').report.findings.filter((f) => f.rule === 'UX-001');
+    assert.ok(
+      findings.some((f) => f.file.endsWith('Edge.tsx') && f.line === 19),
+      'UX-001 must fire on a multiline input whose handler contains a comparison',
+    );
+  });
+
+  test('fragments, unbalanced markup and self-closing roots parse without crashing', () => {
+    const { code, report } = audit('react-app', ['--rule', 'UX-010']);
+    assert.equal(code, 0, 'UX-010 is a WARNING, so it must not fail the gate on its own');
+    const findings = report.findings.filter((f) => f.rule === 'UX-010');
+    assert.ok(
+      findings.some((f) => f.file.endsWith('Edge.tsx') && f.line === 34),
+      'an unclosed <button> holding an icon must not hide the finding',
+    );
+  });
+
   test('a rule never fires on a wrapper that only contains the offending child', () => {
     // UX-013 reports the element that renders the value. Reporting the outer
     // wrapper instead would point developers at the wrong element.
@@ -169,13 +200,19 @@ describe('unit scoping (DEV-187)', () => {
 
 describe('suppression', () => {
   test('inline suppression silences the target line only', () => {
-    const found = rulesIn('react-app');
-    const suppressed = found.filter((id) => ['UX-001', 'UX-005', 'UX-013'].includes(id));
-    // those ids still fire in Violations.tsx, but never in Suppressed.tsx
-    assert.deepEqual(suppressed, ['UX-001', 'UX-005', 'UX-013']);
     const report = audit('react-app').report;
     const inSuppressed = report.findings.filter((f) => f.file.endsWith('Suppressed.tsx'));
-    assert.deepEqual(inSuppressed, []);
+    assert.deepEqual(inSuppressed, [], 'a suppressed line must produce nothing');
+
+    // The same three ids still fire in Violations.tsx, so suppression is proven
+    // per line rather than by the rules being globally disabled.
+    const inViolations = report.findings
+      .filter((f) => f.file.endsWith('Violations.tsx'))
+      .map((f) => f.rule)
+      .sort();
+    for (const id of ['UX-001', 'UX-005', 'UX-013']) {
+      assert.ok(inViolations.includes(id), `${id} must still fire outside Suppressed.tsx`);
+    }
   });
 
   test('--rule narrows the run to a single signature', () => {

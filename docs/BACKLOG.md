@@ -1,7 +1,7 @@
 # Backlog
 
 > **Este archivo no es el backlog.** Es la convención que lo governa.
-> Los ítems viven en **`backlog/tasks/`**, en formato [Backlog.md](https://github.com/MrLesk/Backlog.md), el mismo estándar que usan `gripm` y `dev-board`.
+> Los ítems de **este** repo viven en **`backlog/tasks/`**, en formato [Backlog.md](https://github.com/MrLesk/Backlog.md), el mismo estándar que usan `gripm` y `dev-board`. `backlog/` no se instala: si adoptás el playbook en tu proyecto, este archivo es la guía y vos creás tu propio `backlog/tasks/`.
 >
 > **Vocabulary de estados:** ver [`.agents/STATE_MACHINE.md`](../.agents/STATE_MACHINE.md).
 > **Status válidos:** `ideas` | `draft` | `doing` | `review` | `ready` | `done` | `dismissed`
