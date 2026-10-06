@@ -215,6 +215,64 @@ function collectFiles(dir, out = [], unreadable = []) {
   return out;
 }
 
+/** Normalizes a path to forward slashes so glob matching is OS independent. */
+function toPosixPath(value) {
+  return value.split(path.sep).join('/');
+}
+
+/**
+ * Compiles the `exclude` patterns of .uxaudit.json into matchers.
+ *
+ * Supports the glob subset that is meaningful for source paths: `**` (any depth,
+ * including none), `*` (any run of chars except a separator) and `?`. Patterns are
+ * resolved relative to ROOT so a project can exclude `src/legacy/**` regardless of
+ * the directory the auditor was pointed at with --src.
+ */
+function compileExcludes(patterns) {
+  if (!Array.isArray(patterns) || patterns.length === 0) return [];
+
+  return patterns.map((pattern) => {
+    const normalized = String(pattern).replace(/\\/g, '/').replace(/^\.\//, '');
+
+    // A pattern matches both as written (`src/legacy/**`, relative to ROOT)
+    // and at any depth (`**/src/legacy/**`), so authors never have to guess
+    // whether a path is anchored to the project root or to a nested folder.
+    const anchors = normalized.startsWith('/')
+      ? [normalized.slice(1)]
+      : [normalized, `**/${normalized}`];
+
+    return {
+      pattern: normalized,
+      regexp: new RegExp(`^(?:${anchors.map(globToRegExpSource).join('|')})$`),
+    };
+  });
+}
+
+function globToRegExpSource(glob) {
+  return glob
+    .split('')
+    .reduce((acc, char, index, chars) => {
+      if (char === '*') {
+        if (chars[index + 1] === '*') return `${acc}.*`;
+        return `${acc}[^/]*`;
+      }
+      if (char === '?') return `${acc}[^/]`;
+      if (char === '/') return `${acc}/`;
+      return acc + char.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+    }, '');
+}
+
+function isExcluded(relPath, excludes) {
+  return excludes.some(({ regexp }) => regexp.test(relPath));
+}
+
+/** Drops excluded files before auditing so their paths never reach the report. */
+function applyExcludes(files, excludes) {
+  if (excludes.length === 0) return files;
+
+  return files.filter((file) => !isExcluded(toPosixPath(path.relative(ROOT, file)), excludes));
+}
+
 /** Returns '*' for a blanket suppression or the list of suppressed rule ids. */
 function readSuppression(line) {
   const match = line.match(/ux-audit-ignore\s*([A-Z]+-\d+)?/);
@@ -229,6 +287,30 @@ function buildWindow(lines, index, radius) {
 }
 
 const TAG_OPEN = /<[A-Za-z][\w.]*/g;
+
+/**
+ * Counts the `>` that actually close a JSX tag.
+ *
+ * A bare `>` is not a close: `=>` is an arrow function, not a tag terminator.
+ * Counting it as a close ends a unit early, which splits a multiline JSX
+ * element across units. When the escape hatch sits on a later line than the
+ * handler, it lands outside the unit that carries the offending attribute and
+ * becomes invisible to `unlessLine`:
+ *
+ *     <input
+ *       type="number"
+ *       onChange={(event) => set(toCents(event))}   <-- counted as a close
+ *       inputMode="decimal"                        <-- now in the next unit
+ *     />
+ *
+ * A `>` inside a generic (`Array<string>`) or a comparison is still counted, so
+ * this handles the case that actually produces false positives rather than
+ * attempting to parse JSX.
+ */
+function countTagCloses(text) {
+  const withoutArrows = text.replace(/=>/g, '');
+  return (withoutArrows.match(/>/g) || []).length;
+}
 
 /**
  * Groups lines into logical units.
@@ -255,7 +337,7 @@ function buildUnits(lines) {
 
     const text = current.parts.join('\n');
     const opens = (text.match(TAG_OPEN) || []).length;
-    const closes = (text.match(/>/g) || []).length;
+    const closes = countTagCloses(text);
 
     if (opens <= closes) {
       current.text = text;
@@ -455,12 +537,14 @@ function main() {
   }
 
   const deps = loadDependencies();
+  const excludes = compileExcludes(config.exclude);
   const files = [];
   const unreadable = [];
   collectFiles(srcDir, files, unreadable);
+  const scannedFiles = applyExcludes(files, excludes);
 
   const findings = [];
-  for (const file of files) {
+  for (const file of scannedFiles) {
     const result = auditFile(file, activeRules, deps, disabledRules);
     findings.push(...result.findings);
   }

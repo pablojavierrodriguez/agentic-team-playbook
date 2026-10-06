@@ -29,6 +29,11 @@ function rulesIn(fixture, args = []) {
   return audit(fixture, args).report.findings.map((finding) => finding.rule).sort();
 }
 
+/** Builds an absolute fixture arg for a project living outside tests/fixtures. */
+function fixtureAt(absPath) {
+  return path.relative(path.join(ROOT, 'tests', 'fixtures'), absPath);
+}
+
 describe('rule catalog integrity', () => {
   test('ids are unique and sequential from UX-001', () => {
     assert.equal(new Set(ALL_IDS).size, ALL_IDS.length, 'duplicate rule ids');
@@ -76,6 +81,16 @@ describe('detection', () => {
     assert.deepEqual(clean, [], `unexpected findings on Clean.tsx: ${JSON.stringify(clean, null, 2)}`);
   });
 
+  test('a multiline input with an escape hatch is not split by arrow functions', () => {
+    const report = audit('react-app').report;
+    const multiline = report.findings.filter((f) => f.file.endsWith('Multiline.tsx'));
+    assert.deepEqual(
+      multiline.filter((f) => f.rule === 'UX-001'),
+      [],
+      `UX-001 false positives on multiline inputs: ${JSON.stringify(multiline, null, 2)}`,
+    );
+  });
+
   test('dependency-gated rules stay silent without their library', () => {
     const found = rulesIn('minimal');
     assert.ok(!found.includes('UX-004'), 'UX-004 (date-fns) fired without date-fns');
@@ -98,6 +113,44 @@ describe('suppression', () => {
   test('--rule narrows the run to a single signature', () => {
     const found = rulesIn('react-app', ['--rule', 'UX-011']);
     assert.deepEqual(found, ['UX-011']);
+  });
+
+  test('config `exclude` drops matching paths from the report', () => {
+    const baseline = audit('react-app').report.findings;
+    const fromViolations = baseline.filter((f) => f.file.includes('Violations.tsx')).length;
+    assert.ok(fromViolations > 0, 'fixture must produce findings to exclude');
+
+    const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'audit-ux-exclude-'));
+    fs.cpSync(path.join(ROOT, 'tests', 'fixtures', 'react-app'), temp, { recursive: true });
+    fs.writeFileSync(
+      path.join(temp, '.uxaudit.json'),
+      JSON.stringify({ src: 'src', exclude: ['**/Violations.tsx'] }),
+    );
+
+    const report = audit(fixtureAt(temp)).report;
+    assert.equal(
+      report.findings.filter((f) => f.file.includes('Violations.tsx')).length,
+      0,
+      'excluded file must not appear in the report',
+    );
+    assert.equal(
+      report.findings.length,
+      baseline.length - fromViolations,
+      'excluding one file must not silence the rest of the project',
+    );
+    fs.rmSync(temp, { recursive: true, force: true });
+  });
+
+  test('config `exclude` accepts directory globs', () => {
+    const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'audit-ux-exclude-dir-'));
+    fs.cpSync(path.join(ROOT, 'tests', 'fixtures', 'react-app'), temp, { recursive: true });
+    fs.writeFileSync(
+      path.join(temp, '.uxaudit.json'),
+      JSON.stringify({ src: 'src', exclude: ['src/components/**'] }),
+    );
+
+    assert.equal(audit(fixtureAt(temp)).report.findings.length, 0);
+    fs.rmSync(temp, { recursive: true, force: true });
   });
 
   test('an unknown rule id is a fatal usage error', () => {

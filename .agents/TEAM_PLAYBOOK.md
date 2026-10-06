@@ -84,7 +84,7 @@ Transitions, actors and guards are specified in [STATE_MACHINE.md](STATE_MACHINE
   4. ✅ Production build (`npm run build`)
   5. ✅ `node scripts/audit-ux-code.cjs --strict` (static UX audit, headless)
 - **Anti-Browser-Subagent Inefficiency:** Prohibited to invoke `browser_subagent` for logic, state, API contracts, or persistence that can be audited in milliseconds headlessly. Reserved strictly for static-undeducible CSS/layout issues or explicit user prompt.
-- **Output:** Once verified, moves the item to `status: ready`. On failure, records actionable findings and moves it back to `doing` (transition T5).
+- **Output:** Once verified, moves the item to `status: ready`. On failure, records actionable findings and moves it back to `doing` (transition T3).
 - **`ready` is the formal delivery of development**: the item is validated and immediately eligible for packaging and deployment. A certified item is frozen: any post-QA code change invalidates the certification and requires a return to `doing`.
 
 ### Phase 5: Release Management & Prod Implementation (`ready` ➔ `done`)

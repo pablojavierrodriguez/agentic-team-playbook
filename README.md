@@ -280,8 +280,14 @@ node scripts/audit-ux-code.cjs --rule UX-006   # single signature
 **Project configurable** via `.uxaudit.json`:
 
 ```json
-{ "src": "src", "disableRules": ["UX-011"], "exclude": ["src/legacy/**"] }
+{
+  "src": "src",
+  "disableRules": ["UX-011"],
+  "exclude": ["src/legacy/**", "**/generated/*.tsx"]
+}
 ```
+
+`exclude` supports `**` (any depth), `*` (within one segment) and `?`. Each pattern matches both as written, relative to the project root, and at any depth, so `src/legacy/**` and `**/src/legacy/**` are equivalent. Excluded files are dropped before the audit runs, so they never reach the report.
 
 **Inline suppression:** `// ux-audit-ignore` or `// ux-audit-ignore UX-004`.
 

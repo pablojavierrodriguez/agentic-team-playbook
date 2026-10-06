@@ -67,7 +67,7 @@
   - [ ] `typecheck` — 0 errors
   - [ ] tests — 0 failures
 
-> Al completar esta sección el ítem pasa a `status: doing` → `review` (T3).
+> Al completar esta sección el ítem pasa a `status: doing` → `review` (T1).
 
 ---
 
@@ -97,7 +97,7 @@
 
 - **Verdict:** `[ APPROVED → ready | REJECTED → doing ]`
 
-> **T4 (`review` → `ready`) es exclusiva del QA Auditor.** El developer no auto-certifica. Al rechazar, registrar los findings accionables y mover el ítem a `doing` (T5).
+> **T2 (`review` → `ready`) es exclusiva del QA Auditor.** El developer no auto-certifica. Al rechazar, registrar los findings accionables y mover el ítem a `doing` (T3).
 
 ---
 
@@ -113,7 +113,7 @@
 > Los releases se arman **por valor entregado** agrupando ítems en `ready`, con o sin sprint activo, históricos o del sprint en curso. Sprints y releases no tienen acoplamiento 1:1.
 
 - [ ] Paquete desplegado en producción
-- [ ] Items transicionados `ready` → `done` (T6)
+- [ ] Items transicionados `ready` → `done` (T4)
 
 > **Invariante fundamental:** ningún ítem puede estar en producción sin estar en `done`.
 
