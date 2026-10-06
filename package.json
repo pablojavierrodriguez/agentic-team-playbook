@@ -5,8 +5,8 @@
   "type": "module",
   "main": "./scripts/sync-playbook.mjs",
   "bin": {
-    "playbook": "./scripts/sync-playbook.mjs",
-    "gripm-playbook": "./scripts/sync-playbook.mjs"
+    "playbook": "scripts/sync-playbook.mjs",
+    "gripm-playbook": "scripts/sync-playbook.mjs"
   },
   "scripts": {
     "sync": "node scripts/sync-playbook.mjs",
