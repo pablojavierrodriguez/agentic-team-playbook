@@ -16,13 +16,13 @@
 3. **Simple solutions that scale.** Avoid over-engineering. The simplest solution that reliably solves the problem and can grow is the right one.
 4. **Document important decisions.** Record architectural deviations, patterns, and new standards in documentation.
 5. **Never break what already works.** Understand full blast radius before refactoring.
-6. **Agile Delivery Flow (Dev ➔ QA ➔ Release Management ➔ Prod):**
-   > The delivery status vocabulary lives in **[.agents/STATE_MACHINE.md](.agents/STATE_MACHINE.md)**. There are exactly four statuses: `doing`, `review`, `ready`, `done`. **The backlog is not a status** — an item with no status simply has not entered the flow. **Refinement is a gate (R1), not a state.** Read the state machine before touching any status; never invent intermediate states.
+6. **Agile Delivery Flow (Backlog [draft] ➔ Dev [doing] ➔ QA [ready] ➔ Release Management ➔ Prod [done]):**
+   > The delivery status vocabulary lives in **[.agents/STATE_MACHINE.md](.agents/STATE_MACHINE.md)**. All items in the backlog reside in `draft` (or `ideas` for discovery). The delivery flow actively transitions: `draft` ➔ `doing` ➔ `review` ➔ `ready` ➔ `done`. **The backlog is a planning container, not a status value.** Refinement is a gate (R1) before entering `doing`.
    - **Dev (`doing` ➔ `review`):** Implements code and checks acceptance criteria (`- [x]`). At completion, transitions task to `review`.
-   - **QA (`review` ➔ `ready`):** Audits under the Verification Pyramid. Transitions to `ready` as the **formal handover of development**. This transition is exclusive to the QA role: a developer never self-certifies.
+   - **QA (`review` ➔ `ready`):** Audits under the Verification Pyramid. Transitions to `ready` as the **formal handover of development (developer/agent finish line)**. This transition is exclusive to the QA role: a developer never self-certifies, and NEVER marks `done`.
    - **Release Management (PO + Scrum/Delivery Lead):** Assembles releases by **delivered value** from all available `ready` items (historical or current).
    - **Production Deployment (`ready` ➔ `done`):** Deployed package items become `done`. Marking `done` without an actual deploy is a state lie.
-   - **Fundamental Invariant:** **No item can exist in production that is not in `done`**.
+   - **Fundamental Invariants:** **No item can exist in production that is not in `done`**, and **no item can be marked `done` without an actual release deploy**.
 7. **Decoupled Sprints & Releases:** Sprints and releases have no 1:1 coupling. Releases are created based on delivered value with any available `ready` items, with or without an active sprint.
 8. **Sprint Lifecycle & PO Sovereignty:** Sprints are fixed timeboxes. If items complete before the timebox expires, the PO expands scope with refined backlog items to prevent idle gaps. Sprints rarely conclude prematurely. The agent NEVER closes a sprint or triggers a retrospective by deduction; only upon explicit textual command from the PO.
 9. **Dynamic Operating Modes:** The user should never need to manually specify what role or framework to trigger. The agent dynamically classifies requests between:

@@ -25,6 +25,7 @@
  *
  * Options:
  *   --repo <dir>       Target repository (default: cwd)
+ *   --source <dir>     Local playbook directory to sync from (bypasses GitHub)
  *   --tag <ref>        Git ref to sync from (default: latest release tag, else main)
  *   --remote <o/r>     Upstream repository (default: pablojavierrodriguez/gripm-playbook)
  *   --stack <name>     Also install an optional stack pack (repeatable)
@@ -127,7 +128,12 @@ async function fetchText(url, { retries = FETCH_RETRIES } = {}) {
 const rawUrl = (remote, ref, file) =>
   `https://raw.githubusercontent.com/${remote}/${ref}/${file}`;
 
-async function fetchRemoteFile(remote, ref, file) {
+async function fetchRemoteFile(remote, ref, file, sourceDir = null) {
+  if (sourceDir) {
+    const absPath = path.join(sourceDir, file);
+    if (!fs.existsSync(absPath)) return null;
+    return fs.readFileSync(absPath, 'utf8');
+  }
   const { notFound, content } = await fetchText(rawUrl(remote, ref, file));
   return notFound ? null : content;
 }
@@ -151,8 +157,8 @@ async function resolveRef(remote, requested) {
 // manifest
 // ---------------------------------------------------------------------------
 
-async function loadManifest(remote, ref) {
-  const content = await fetchRemoteFile(remote, ref, MANIFEST_PATH);
+async function loadManifest(remote, ref, sourceDir = null) {
+  const content = await fetchRemoteFile(remote, ref, MANIFEST_PATH, sourceDir);
   if (!content) return null;
   try {
     const manifest = JSON.parse(content);
@@ -306,7 +312,7 @@ export function classifyLocalFile({ localHash, knownHash, wasCustomization }) {
 }
 
 /** Files that belong to the framework but are no longer part of the plan. */
-export function findOrphanedFiles(targetRepo, plannedFiles) {
+export function findOrphanedFiles(targetRepo, plannedFiles, lockFiles = null) {
   const agentsRoot = path.join(targetRepo, '.agents');
   if (!fs.existsSync(agentsRoot)) return [];
 
@@ -328,7 +334,11 @@ export function findOrphanedFiles(targetRepo, plannedFiles) {
       }
       if (!entry.name.endsWith('.md')) continue;
       const rel = path.relative(targetRepo, full).split(path.sep).join('/');
-      if (!planned.has(rel)) orphans.push(rel);
+      if (lockFiles && typeof lockFiles === 'object' && Object.keys(lockFiles).length > 0) {
+        if (lockFiles[rel] && !planned.has(rel)) orphans.push(rel);
+      } else {
+        if (!planned.has(rel)) orphans.push(rel);
+      }
     }
   };
 
@@ -350,7 +360,9 @@ function prompt(question) {
 }
 
 export async function runPlaybookSync(targetRepo = process.cwd(), options = {}) {
-  const remote = options.remote || DEFAULT_REMOTE;
+  const isLocalSource = !!options.source || (options.remote && fs.existsSync(options.remote) && fs.statSync(options.remote).isDirectory());
+  const localSourceDir = options.source ? path.resolve(options.source) : (isLocalSource ? path.resolve(options.remote) : null);
+  const remote = localSourceDir || options.remote || DEFAULT_REMOTE;
   const requestedRef = options.tag || options.branch;
   const stacks = options.stacks || [];
   const isDryRun = !!options.dryRun;
@@ -358,11 +370,13 @@ export async function runPlaybookSync(targetRepo = process.cwd(), options = {}) 
   const assumeYes = !!options.yes;
   const writeManifest = options.manifest !== false;
 
-  const { ref, pinned } = await resolveRef(remote, requestedRef);
+  const { ref, pinned } = localSourceDir
+    ? { ref: 'local', pinned: true }
+    : await resolveRef(remote, requestedRef);
 
   printBanner(targetRepo, remote, ref, pinned, stacks);
 
-  const manifest = await loadManifest(remote, ref);
+  const manifest = await loadManifest(remote, ref, localSourceDir);
   if (!manifest) {
     console.log('⚠️  Could not read the remote manifest; falling back to the built-in core list.');
     console.log('');
@@ -393,7 +407,7 @@ export async function runPlaybookSync(targetRepo = process.cwd(), options = {}) 
   for (const relativePath of files) {
     let remoteContent;
     try {
-      remoteContent = await fetchRemoteFile(remote, ref, relativePath);
+      remoteContent = await fetchRemoteFile(remote, ref, relativePath, localSourceDir);
     } catch (err) {
       console.error(`  ❌ [Error]      ${relativePath}: ${err.message}`);
       stats.missingUpstream += 1;
@@ -451,7 +465,7 @@ export async function runPlaybookSync(targetRepo = process.cwd(), options = {}) 
     }
 
     let provenance = null;
-    if (classification === 'unknown' && checkHistory && !force) {
+    if (classification === 'unknown' && checkHistory && !localSourceDir && !force) {
       provenance = await findCanonicalProvenance(remote, relativePath, localContent, budget);
       if (provenance.status === 'canonical') {
         classification = 'managed';
@@ -516,7 +530,7 @@ export async function runPlaybookSync(targetRepo = process.cwd(), options = {}) 
     console.log('  🛡️  [Preserved]   AGENTS.md (project-specific config left untouched)');
   } else if (options.initAgents) {
     try {
-      const template = await fetchRemoteFile(remote, ref, 'AGENTS.md');
+      const template = await fetchRemoteFile(remote, ref, 'AGENTS.md', localSourceDir);
       if (template && !isDryRun) {
         fs.writeFileSync(agentsMdPath, template, 'utf8');
         console.log('  ✨ [Created]     AGENTS.md (base template — customise it with your stack)');
@@ -545,7 +559,7 @@ export async function runPlaybookSync(targetRepo = process.cwd(), options = {}) 
     console.log(`  🔏 [Lockfile]    ${LOCK_PATH} (${Object.keys(nextLockFiles).length} files, ${nextCustomizations.size} customizations)`);
   }
 
-  const orphans = isDryRun ? [] : findOrphanedFiles(targetRepo, files);
+  const orphans = isDryRun ? [] : findOrphanedFiles(targetRepo, files, lock.files);
 
   console.log('');
   console.log('📊 Summary');
@@ -619,7 +633,7 @@ async function listStacks(remote) {
 
 function parseArgs(argv) {
   const opts = {
-    repo: process.cwd(), tag: null, remote: DEFAULT_REMOTE, stacks: [],
+    repo: process.cwd(), source: null, tag: null, remote: DEFAULT_REMOTE, stacks: [],
     initAgents: false, dryRun: false, force: false, yes: false,
     manifest: true, adopt: false, history: true,
     listStacks: false, help: false,
@@ -631,6 +645,7 @@ function parseArgs(argv) {
     switch (arg) {
       case 'sync': break;
       case '--repo': case '-r': opts.repo = path.resolve(next()); break;
+      case '--source': case '--from': opts.source = path.resolve(next()); break;
       case '--tag': case '-t': opts.tag = next(); break;
       case '--branch': case '-b': opts.tag = next(); break;
       case '--remote': opts.remote = next(); break;

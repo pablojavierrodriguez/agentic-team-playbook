@@ -4,20 +4,25 @@
 
 ---
 
-## 1. Status
+## 1. Status y Taxonomía del Flujo
 
-Cuatro status, y nada más:
+El ciclo de vida del trabajo consta de estados claramente tipados y sin ambigüedades:
 
-| Status | Significado | Dónde está | Quién lo pone |
-| :--- | :--- | :--- | :--- |
-| `doing` | En implementación. Único status con código escribiéndose. | Rama de trabajo | Principal Engineer |
-| `review` | Implementación completa, esperando certificación. | Rama de trabajo | Principal Engineer |
-| `ready` | **Entrega formal del desarrollo.** Certificado, elegible para empaquetado. | Rama de trabajo | **QA Auditor** |
-| `done` | Desplegado en producción. | Producción | Release Management |
+| Fase | Status | Significado | Dónde reside | Quién lo asigna |
+| :--- | :--- | :--- | :--- | :--- |
+| **Discovery** | `ideas` | Idea, hipótesis o investigación preliminar. | Pool / Discovery | PO / Diseñador |
+| **Backlog** | `draft` | **Tarea formal especificada y con ACs.** Lista para entrar a desarrollo. | Backlog (disco) | PO / Dev al crear la tarea |
+| **Delivery** | `doing` | En desarrollo activo. Único status con código escribiéndose. | Rama de trabajo | Principal Engineer / Agente |
+| **Delivery** | `review` | Implementación completa y tests locales en verde. Esperando certificación. | Rama de trabajo | Principal Engineer / Agente |
+| **Delivery** | `ready` | **Entrega formal del desarrollo (Línea de llegada del Dev/Agente).** Certificado bajo Pirámide. | Rama / Staging | **QA Auditor / Test Suite** |
+| **Producción** | `done` | **Desplegado en producción.** Empaquetado y publicado en release. | Producción / Tag | **Release Management / Deploy** |
 
-**El backlog no es un status.** Es el conjunto de ítems **sin status asignado**. Un ítem entra al flujo cuando arranca en `doing`, y sale del flujo cuando pasa a `done` o cuando vuelve al pool.
+### Reglas Fundamentales de Estado:
 
-Regla de escritura: si un ítem no tiene status, no se escribe ningún status. No inventar estados intermedios para representar "está siendo refinado", "está esperando", "está bloqueado".
+1. **El Backlog no es un valor de estado:** Es la **dimensión de planificación y el contenedor** de trabajo no iniciado. Toda tarea en el Backlog tiene asignado legítimamente el estado canónico `draft` (o `ideas` si es exploratoria).
+2. **Cero ítems sin estado:** Toda tarea que se crea en disco nace con `status: draft`. Dejar tareas sin estado o con status vacío colisiona con el tipado estricto (`ItemStatus`) y corrompe los filtros.
+3. **`ready` es la meta del desarrollador:** El trabajo de desarrollo y del agente concluye formalmente al certificar en `ready`. Un desarrollador o agente **NUNCA** mueve una tarea a `done` durante el desarrollo.
+4. **`done` exige deploy real:** El estado `done` se asigna exclusivamente cuando el Release Manager o el pipeline empaqueta la versión y la despliega a producción (el Release Assembler promueve automáticamente de `ready` a `done`). Marcar `done` sin deploy real es una mentira de estado.
 
 ---
 
@@ -38,7 +43,7 @@ El flag se registra en el backlog del proyecto:
 - **Refined:** yes (2026-10-04)   # o: no — falta: <qué>
 ```
 
-Un ítem no refinado **no puede** recibir status. Se queda en el pool hasta que el PO lo refine.
+Un ítem no refinado permanece en `draft` (o `ideas` si es discovery) en el backlog. No puede entrar a `doing` hasta que se apruebe el Gate R1.
 
 ---
 
@@ -46,12 +51,12 @@ Un ítem no refinado **no puede** recibir status. Se queda en el pool hasta que 
 
 | # | De → A | Actor | Guard |
 | :--- | :--- | :--- | :--- |
-| T0 | *(pool)* → `doing` | Principal Engineer | **Gate R1 aprobado** + priorizado por el PO + rama lista. |
+| T0 | `draft` → `doing` | Principal Engineer | **Gate R1 aprobado** + priorizado por el PO + rama lista. |
 | T1 | `doing` → `review` | Principal Engineer | Código implementado, ACs marcadas `- [x]`, y pasos 1–2 de la Pirámide en verde local (`typecheck` + tests). |
 | T2 | `review` → `ready` | **QA Auditor** | Pirámide de Verificación completa en verde: `typecheck` → tests → consistencia spec ↔ backlog → build. |
 | T3 | `review` → `doing` | QA Auditor | Rechazado, con findings accionables registrados en la QA Matrix. |
 | T4 | `ready` → `done` | Release Management | Paquete desplegado en producción. |
-| T5 | `doing` → *(pool)* | PO | Timebox del sprint expirado, o depriorizado explícitamente. |
+| T5 | `doing` → `draft` | PO | Timebox del sprint expirado, o depriorizado explícitamente. |
 
 ---
 
@@ -77,10 +82,10 @@ Un ítem no refinado **no puede** recibir status. Se queda en el pool hasta que 
 
 ## 6. Cómo se refleja en una sprint spec
 
-El campo `Status:` de `docs/sprints/SPRINT-XXX.md` usa **exactamente** uno de estos valores, en minúsculas, o queda vacío si el ítem aún no entró al flujo:
+El campo `Status:` de `docs/sprints/SPRINT-XXX.md` o del frontmatter de tareas usa **exactamente** uno de estos valores canónicos en minúsculas:
 
 ```
-(empty) | doing | review | ready | done
+ideas | draft | doing | review | ready | done
 ```
 
 Y registra la transición operada cuando aplique:

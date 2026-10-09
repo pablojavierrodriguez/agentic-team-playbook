@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.2.2] — 2026-10-09
+
+### Added
+
+- **Zero-network local sync (`--source` / `--from`) in `sync-playbook.mjs`.** The synchronizer now accepts a local playbook directory path via `--source <dir>` (or auto-detects if `--remote` points to a local directory), allowing offline testing and immediate synchronization between sibling repositories without hitting GitHub.
+
+### Fixed
+
+- **Smart orphan detection prevents false alarms on consumer repositories.** `findOrphanedFiles` now leverages `.playbook-lock.json` when available, only reporting files that were previously installed by the framework and removed from the active plan. Project-specific rules and application skills in `.agents/` are recognized and no longer misreported as orphaned framework files.
+
+### Changed
+
+- **State machine and Git governance harmonization.** Aligned `.agents/STATE_MACHINE.md` and `.agents/rules/git-workflow.md` with the canonical agile delivery lifecycle (`draft ➔ doing ➔ review ➔ ready ➔ done`) and consolidated single-task commit cadence.
+
+---
+
 ## [2.2.1] — 2026-10-06
 
 `DEV-188`
